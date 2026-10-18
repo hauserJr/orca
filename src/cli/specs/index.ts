@@ -1,4 +1,6 @@
 import type { CommandSpec } from '../args'
+import { WORK_INBOX_COMMAND_SPECS } from './work-inbox'
+import { WORK_INBOX_ASK_COMMAND_SPECS } from './work-inbox-ask'
 import { ACCOUNT_COMMAND_SPECS } from './account'
 import { BROWSER_ADVANCED_COMMAND_SPECS } from './browser-advanced'
 import { BROWSER_BASIC_COMMAND_SPECS } from './browser-basic'
@@ -27,6 +29,8 @@ import { REFERENCE_COMMAND_SPECS } from './reference'
 
 export const COMMAND_SPECS: CommandSpec[] = [
   ...CORE_COMMAND_SPECS,
+  ...WORK_INBOX_COMMAND_SPECS,
+  ...WORK_INBOX_ASK_COMMAND_SPECS,
   ...REFERENCE_COMMAND_SPECS,
   ...ARTIFACT_COMMAND_SPECS,
   ...ACCOUNT_COMMAND_SPECS,

@@ -196,6 +196,9 @@ importers:
       '@linear/sdk':
         specifier: ^97.0.0
         version: 97.0.0(graphql@16.14.2)
+      '@modelcontextprotocol/sdk':
+        specifier: 1.30.0
+        version: 1.30.0(supports-color@7.2.0)(zod@4.6.5)
       '@orca/process-host':
         specifier: workspace:*
         version: link:src/packages/process-host

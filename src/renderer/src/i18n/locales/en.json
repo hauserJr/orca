@@ -18122,6 +18122,43 @@
         "a62f9db53d": "Cancel",
         "c77189bc0c": "Update filter",
         "19af906d12": "Save filter"
+      },
+      "work-inbox": {
+        "status": {
+          "open": "Waiting for your answer",
+          "answered": "Answer saved, not yet received by agent",
+          "delivered": "Received by agent",
+          "cancelled": "Cancelled"
+        },
+        "error": {
+          "conflict": "This question changed before your answer was saved. Your draft is kept; review the current state above.",
+          "notFound": "This question no longer exists on this host. Your draft is kept.",
+          "unreachable": "Could not confirm the answer was saved. Editing is locked until the host confirms it; Retry sends the same answer, so it is not duplicated."
+        },
+        "yourAnswer": "Your answer",
+        "options": "Answer options",
+        "addNote": "Add a note (optional)",
+        "answerLabel": "Answer",
+        "noAnswerShape": "This question has no options and does not accept text.",
+        "retry": "Retry",
+        "send": "Send",
+        "emptyOpen": "No agent is waiting on you. When an agent needs your decision, its question appears here.",
+        "emptyHistory": "No answered questions yet.",
+        "title": "Work Inbox",
+        "description": "Questions agents asked you. The asking agent continues after it receives your answer.",
+        "tabOpen": "Open",
+        "tabHistory": "History",
+        "filterProject": "Filter by project",
+        "allProjects": "All projects",
+        "filterAgent": "Filter by agent",
+        "allAgents": "All agents",
+        "refresh": "Refresh",
+        "unsupported": "The Orca version on this host does not support Work Inbox yet.",
+        "loadFailed": "Could not load the inbox. Drafts are kept.",
+        "loading": "Loading questions…",
+        "showMore": "Show more",
+        "capped": "Showing the first 200 questions. Filter by project or agent to see the rest.",
+        "sidebarLabel": "Work Inbox"
       }
     },
     "i18n": {

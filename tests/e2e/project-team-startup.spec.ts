@@ -73,7 +73,7 @@ test('explicit team bindings launch once without changing existing settings', as
       .poll(async () =>
         readFile(join(session.userDataDir, 'project-team-runtime.json'), 'utf8').catch(() => '')
       )
-      .toMatch(/started|present|team_existing_role_requires_attention/)
+      .toMatch(/"status": "started"|"code": "team_existing_role_requires_attention"/)
     const beforeReload = JSON.parse(
       await readFile(join(session.userDataDir, 'project-team-runtime.json'), 'utf8')
     ).checkedAt
@@ -90,7 +90,16 @@ test('explicit team bindings launch once without changing existing settings', as
         )
         return data.checkedAt !== beforeReload ? data.teams[0]?.roles[0]?.status : null
       })
-      .toBeTruthy()
+      .toBe('blocked')
+    const report = JSON.parse(
+      await readFile(join(session.userDataDir, 'project-team-runtime.json'), 'utf8')
+    )
+    // The fake child is deliberately not a recognized provider: preserve it, never restart it.
+    expect(report.teams[0].roles[0].code).toBe('team_existing_role_requires_attention')
+    await launched.page.getByRole('option', { name: /Active project project/ }).click()
+    await expect(
+      launched.page.getByText('Review team agent', { exact: true }).first()
+    ).toBeVisible()
     expect((await readFile(marker, 'utf8')).trim().split('\n')).toHaveLength(1)
     expect(
       await launched.page.evaluate(() => window.__store!.getState().settings?.terminalFontSize)

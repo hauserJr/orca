@@ -91,7 +91,9 @@ export async function startProjectTeams(): Promise<void> {
           let projectRoot = entry.projectRoot
           if (projectRoot.startsWith('workspace:')) {
             const name = projectRoot.slice('workspace:'.length)
-            const matches = catalog.filter((w) => w.hostId === 'local' && w.name === name)
+            const matches = catalog.filter(
+              (w) => (!w.hostId || w.hostId === 'local') && w.name === name
+            )
             if (matches.length !== 1) {
               results.push({
                 config: configs[index],
@@ -102,8 +104,17 @@ export async function startProjectTeams(): Promise<void> {
             }
             projectRoot = matches[0].path
           }
-          const roles = await service.ensure({ ...entry, config: configs[index], projectRoot })
-          results.push({ config: configs[index], projectRoot, roles })
+          try {
+            const roles = await service.ensure({ ...entry, config: configs[index], projectRoot })
+            results.push({ config: configs[index], projectRoot, roles })
+          } catch {
+            results.push({
+              config: configs[index],
+              projectRoot,
+              code: 'team_config_load_failed',
+              roles: []
+            })
+          }
         }
         await writeFile(
           join(profile, 'project-team-runtime.json'),

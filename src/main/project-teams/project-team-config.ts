@@ -76,6 +76,12 @@ export function resolveTeamPath(value: string, root: string): string {
   return value.startsWith('~/') ? resolve(homedir(), value.slice(2)) : resolve(root, value)
 }
 export async function readTeamResource(configFile: string, resource: string): Promise<string> {
+  return (await loadTeamResource(configFile, resource)).text
+}
+export async function loadTeamResource(
+  configFile: string,
+  resource: string
+): Promise<{ path: string; text: string }> {
   const base = await realpath(dirname(configFile))
   const file = await realpath(resolve(base, resource))
   const part = relative(base, file)
@@ -86,5 +92,5 @@ export async function readTeamResource(configFile: string, resource: string): Pr
   if (Buffer.byteLength(raw) > 1024 * 1024) {
     throw new Error('team_resource_too_large')
   }
-  return raw
+  return { path: file, text: raw }
 }

@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mkdtemp, writeFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, realpath, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { ProjectTeam, readTeamResource, TeamRegistry } from './project-team-config'
+import {
+  ProjectTeam,
+  readTeamResource,
+  loadTeamResource,
+  TeamRegistry
+} from './project-team-config'
 import { ProjectTeamService } from './project-team-service'
 import { allocateTerminalPaneIdentity } from '../runtime/runtime-terminal-pane-identity'
 
@@ -25,6 +30,15 @@ const role = {
   cwd: '.',
   instructions: ['role.md']
 }
+it('returns the exact validated path without expanding a literal tilde', async () => {
+  await mkdir(join(root, '~'))
+  const settings = join(root, '~', 'settings.json')
+  await writeFile(settings, '{}')
+  expect(await loadTeamResource(join(root, 'team.json'), '~/settings.json')).toEqual({
+    path: await realpath(settings),
+    text: '{}'
+  })
+})
 async function fixture() {
   const config = join(root, 'team.json')
   await writeFile(config, JSON.stringify({ version: 1, name: 'Test', roles: [role] }))

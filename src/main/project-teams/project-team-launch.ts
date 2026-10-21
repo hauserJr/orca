@@ -1,8 +1,7 @@
 import { runProcess } from '@orca/process-host'
-import { join } from 'node:path'
 import { resolveCommandOnLocalPath } from '../ipc/command-path-resolver'
 import { buildShellCommandFromArgv } from '../../shared/tui-agent-startup-shell'
-import { readTeamResource, resolveTeamPath, type ProjectTeamRole } from './project-team-config'
+import { loadTeamResource, resolveTeamPath, type ProjectTeamRole } from './project-team-config'
 
 export async function buildTeamLaunch(
   role: ProjectTeamRole,
@@ -88,8 +87,8 @@ export async function buildTeamLaunch(
       args.push('--plugin-dir', resolveTeamPath(role.pluginDir, root))
     }
     if (role.settingsFile) {
-      await readTeamResource(config, role.settingsFile)
-      args.push('--settings', resolveTeamPath(role.settingsFile, join(config, '..')))
+      const settings = await loadTeamResource(config, role.settingsFile)
+      args.push('--settings', settings.path)
     }
     for (const scope of role.scopeDirs) {
       args.push('--add-dir', resolveTeamPath(scope, root))

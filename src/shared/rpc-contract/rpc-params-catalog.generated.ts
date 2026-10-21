@@ -654,6 +654,13 @@ import {
   SkillUploadChunkRequestSchema,
   SkillUploadCommitRequestSchema
 } from '../skill-upload-session-contract'
+import {
+  WorkInboxAckParams,
+  WorkInboxAnswerParams,
+  WorkInboxAskParams,
+  WorkInboxCancelParams,
+  WorkInboxListParams
+} from '../work-inbox'
 
 // Why: the host parses params with these schemas, so a client that matches this map
 // matches the dispatcher. Clients must import it for types only — parsing a params
@@ -1393,6 +1400,12 @@ export const RPC_PARAMS_BY_METHOD = {
   'updater.download': null,
   'updater.getStatus': null,
   'updater.install': null,
+  'workInbox.ack': WorkInboxAckParams,
+  'workInbox.answer': WorkInboxAnswerParams,
+  'workInbox.ask': WorkInboxAskParams,
+  'workInbox.cancel': WorkInboxCancelParams,
+  'workInbox.list': WorkInboxListParams,
+  'workInbox.reopen': WorkInboxCancelParams,
   'workspacePorts.kill': WorkspacePortKillParams,
   'workspacePorts.killHost': WorkspacePortKillHostParams,
   'workspacePorts.scan': WorkspacePortScanParams,

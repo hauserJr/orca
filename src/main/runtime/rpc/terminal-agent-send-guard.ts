@@ -4,9 +4,10 @@ const AGENT_STATUS_RECHECK_INTERVAL_MS = 150
 const AGENT_STATUS_RECHECK_TIMEOUT_MS = 1_050
 
 type AssertTerminalAgentSendableOptions = {
-  runtime: OrcaRuntimeService
+  runtime: Pick<OrcaRuntimeService, 'getTerminalAgentStatus'>
   handle: string
   assertWritable: () => void
+  requireIdle?: boolean
 }
 
 export async function assertTerminalAgentSendable(
@@ -28,6 +29,9 @@ export async function assertTerminalAgentSendable(
     if (agentStatus.isRunningAgent) {
       if (agentStatus.status === 'permission') {
         throw new Error('terminal_guard_permission')
+      }
+      if (options.requireIdle && agentStatus.status !== 'idle') {
+        throw new Error('terminal_guard_busy')
       }
       return
     }

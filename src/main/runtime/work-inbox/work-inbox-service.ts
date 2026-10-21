@@ -2,6 +2,8 @@ import type { OrcaRuntimeService } from '../orca-runtime'
 import type { OrchestrationDb } from '../orchestration/db'
 import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
 import { WorkInboxStore, type WorkInboxAsker } from './work-inbox-store'
+import { parseOrcaSessionAddress } from '../../../shared/orca-session-address'
+import { readStructuredAgentSessionRecord } from '../structured-worker-authority'
 
 const stores = new WeakMap<OrchestrationDb, WorkInboxStore>()
 const waiters = new Map<string, Set<() => void>>()
@@ -50,7 +52,9 @@ export function waitForWorkInboxChange(
 /** Project and agent come from the asking terminal; any unresolved part stays null. */
 export function resolveWorkInboxAsker(runtime: OrcaRuntimeService, handle: string): WorkInboxAsker {
   const paneKey = runtime.getTerminalPaneKey(handle)
-  const worktreeId = runtime.getTerminalWorktreeIdForHandle(handle)
+  const sessionId = parseOrcaSessionAddress(handle)
+  const session = sessionId ? readStructuredAgentSessionRecord(sessionId) : null
+  const worktreeId = session?.location.workspaceId ?? runtime.getTerminalWorktreeIdForHandle(handle)
   const repoId = worktreeId ? getRepoIdFromWorktreeId(worktreeId) : null
   const repo = repoId ? runtime.listRepos().find((candidate) => candidate.id === repoId) : undefined
   const agentKind = paneKey
@@ -62,6 +66,6 @@ export function resolveWorkInboxAsker(runtime: OrcaRuntimeService, handle: strin
     projectId: repoId,
     projectLabel: repo?.displayName ?? null,
     worktreeId,
-    agentKind
+    agentKind: session?.provider ?? agentKind
   }
 }

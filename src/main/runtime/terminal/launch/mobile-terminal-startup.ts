@@ -13,7 +13,7 @@ import { isTuiAgentEnabled } from '../../../../shared/tui-agent-selection'
 import {
   buildAgentResumeStartupPlan,
   buildAgentStartupPlan
-} from '../../../../shared/tui-agent-startup'
+} from '../../../../shared/managed-agent-startup'
 import { resolveResumeLaunchRecipe } from '../../../../shared/tui-agent-launch-defaults'
 import { resolveAgentStartupPlanInputs } from '../../../../shared/agent-startup-plan-inputs'
 import {

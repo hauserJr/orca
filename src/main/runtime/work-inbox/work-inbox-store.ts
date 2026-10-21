@@ -110,6 +110,10 @@ export class WorkInboxStore {
     const view = params.view ?? 'open'
     const conditions = [view === 'open' ? "status = 'open'" : "status != 'open'"]
     const values: (string | number)[] = []
+    if (params.id) {
+      conditions.push('id = ?')
+      values.push(params.id)
+    }
     if (params.projectId) {
       conditions.push('project_id = ?')
       values.push(params.projectId)
@@ -195,7 +199,29 @@ export class WorkInboxStore {
            SET status = 'cancelled', revision = revision + 1, cancelled_at = ?
            WHERE id = ? AND status = 'open'`
         )
-        .run(now, row.id)
+        .run(Math.max(now, (row.cancelled_at ?? 0) + 1), row.id)
+      return { status: 'ok', item: this.requireItem(row.id) }
+    })
+  }
+
+  /** Reopen only a closed, unanswered question; the last closure remains in its history. */
+  reopen(params: WorkInboxCancelParams): WorkInboxMutationResult {
+    return this.transaction(() => {
+      const row = this.readRow(params.id)
+      if (!row) {
+        return { status: 'not-found' }
+      }
+      if (row.status === 'open' && row.revision === params.expectedRevision + 1) {
+        return { status: 'ok', item: toItem(row) }
+      }
+      if (row.status !== 'cancelled' || row.revision !== params.expectedRevision) {
+        return { status: 'conflict', item: toItem(row) }
+      }
+      this.db
+        .prepare(
+          "UPDATE work_inbox_items SET status = 'open', revision = revision + 1 WHERE id = ? AND status = 'cancelled' AND revision = ?"
+        )
+        .run(row.id, params.expectedRevision)
       return { status: 'ok', item: this.requireItem(row.id) }
     })
   }

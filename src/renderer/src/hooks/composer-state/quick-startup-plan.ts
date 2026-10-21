@@ -3,8 +3,8 @@ import type { TuiAgent } from '../../../../shared/tui-agent'
 import type { AgentStartupShell } from '../../../../shared/tui-agent-startup-shell'
 import type { AgentStartedTelemetry } from '@/lib/worktree-startup-payload'
 import type { WorktreeCreationRequest } from '@/lib/pending-worktree-creation'
-import type { AgentStartupPlan } from '@/lib/tui-agent-startup'
-import { buildAgentDraftLaunchPlan, buildAgentStartupPlan } from '@/lib/tui-agent-startup'
+import type { AgentStartupPlan } from '@/lib/managed-agent-startup'
+import { buildAgentDraftLaunchPlan, buildAgentStartupPlan } from '@/lib/managed-agent-startup'
 import {
   resolveTuiAgentLaunchArgs,
   resolveTuiAgentLaunchEnv

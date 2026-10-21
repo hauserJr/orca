@@ -2,10 +2,9 @@ import { assertLegacyAiVaultResumeCommandAllowed } from '../../../../ai-vault/st
 import { InvalidArgumentError, defineMethod } from '../../core'
 import { isTerminalQueryReply } from '../../../../../shared/terminal-query-reply'
 import { isUntypedTerminalInput } from '../../../../../shared/terminal-untyped-input'
-import { assertTerminalAgentSendable } from '../../terminal-agent-send-guard'
+import { assertTerminalAgentSendPreconditions } from './terminal-agent-send-preconditions'
 import { TerminalSend } from '../../../../../shared/rpc-contract/terminal-unary-params'
 import {
-  assertTerminalSendExactPtyBinding,
   assertTerminalSendTextWithinLimit,
   commitMobileInputFloorClaim,
   getTerminalSendGuardRefusedReason,
@@ -136,7 +135,19 @@ export const TERMINAL_SEND_METHODS = [
       }
       const hasText = typeof params.text === 'string' && params.text.length > 0
       const hasSuffix = params.enter === true || params.interrupt === true
-      if (params.requireAgentStatus === 'sendable' && hasText && hasSuffix) {
+      const useSettledAgentPrompt =
+        params.agentPrompt === true &&
+        hasText &&
+        params.enter === true &&
+        params.interrupt !== true &&
+        params.client?.type === 'desktop' &&
+        (await runtime.isTerminalRunningSettledPromptAgent(params.terminal))
+      if (
+        params.requireAgentStatus &&
+        hasText &&
+        hasSuffix &&
+        !(params.requireAgentStatus === 'idle' && useSettledAgentPrompt)
+      ) {
         // Why: guarded sends are two-phase; reject combined payload + submit so a guard flip can't cause partial delivery.
         return {
           send: {
@@ -146,23 +157,19 @@ export const TERMINAL_SEND_METHODS = [
           }
         }
       }
+      if (
+        params.expectedWorkInboxProcess &&
+        (params.requireAgentStatus !== 'idle' || !useSettledAgentPrompt)
+      ) {
+        return { send: { handle: params.terminal, accepted: false, bytesWritten: 0 } }
+      }
       // Why: recheck permission/no-agent state immediately before accepting the PTY write.
       const assertSendPreconditions =
-        params.requireAgentStatus === 'sendable'
-          ? async (ptyId?: string): Promise<void> => {
-              await assertTerminalAgentSendable({
-                runtime,
-                handle: params.terminal,
-                assertWritable: () => {
-                  assertTerminalSendExactPtyBinding(runtime, params.terminal, ptyId)
-                  if (ptyId && isTerminalInputLockedForClient(runtime, ptyId, params.client)) {
-                    throw new Error('terminal_guard_not_writable')
-                  }
-                }
-              })
-            }
+        params.requireAgentStatus !== undefined
+          ? (ptyId?: string): Promise<void> =>
+              assertTerminalAgentSendPreconditions(runtime, params, ptyId)
           : undefined
-      if (params.requireAgentStatus === 'sendable') {
+      if (params.requireAgentStatus !== undefined) {
         try {
           await assertSendPreconditions?.(leaf?.ptyId ?? undefined)
         } catch (error) {
@@ -198,13 +205,6 @@ export const TERMINAL_SEND_METHODS = [
               markMutationEffectPossible?.()
             }
           : assertSendPreconditions
-      const useSettledAgentPrompt =
-        params.agentPrompt === true &&
-        hasText &&
-        params.enter === true &&
-        params.interrupt !== true &&
-        params.client?.type === 'desktop' &&
-        (await runtime.isTerminalRunningSettledPromptAgent(params.terminal))
       const reserveWrite =
         params.inputKind !== 'query-reply' && leaf?.ptyId && mobileFloorClientId
           ? (ptyId: string): void => {

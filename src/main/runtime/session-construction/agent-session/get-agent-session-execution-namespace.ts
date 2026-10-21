@@ -13,7 +13,7 @@ import {
   type ProviderExecutionNamespace
 } from '../../agent-session-claim-identity'
 import { isTuiAgentEnabled } from '../../../../shared/tui-agent-selection'
-import { buildAgentResumeStartupPlan } from '../../../../shared/tui-agent-startup'
+import { buildAgentResumeStartupPlan } from '../../../../shared/managed-agent-startup'
 import { agentLaunchQuotingShell } from '../../../../shared/agent-launch-runtime'
 import { OrchestrationError } from '../../orchestration/orchestration-error'
 import { withAgentSessionAccountEnv } from '../../agent-session-account-env'

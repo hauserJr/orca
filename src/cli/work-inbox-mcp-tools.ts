@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import type { WorkInboxAskResult } from '../shared/work-inbox'
+import { WORK_INBOX_ROUTING_INSTRUCTIONS } from '../shared/work-inbox-routing-instructions'
 
 export type WorkInboxAsk = (params: {
   question?: string
@@ -17,7 +18,10 @@ export function createWorkInboxMcpServer(
   ask: WorkInboxAsk,
   acknowledge: WorkInboxAcknowledge
 ): McpServer {
-  const server = new McpServer({ name: 'orca-work-inbox', version: '1.0.0' })
+  const server = new McpServer(
+    { name: 'orca-work-inbox', version: '1.0.0' },
+    { instructions: WORK_INBOX_ROUTING_INSTRUCTIONS }
+  )
   async function questionResult(params: Parameters<WorkInboxAsk>[0]) {
     try {
       const outcome = await ask(params)
@@ -28,7 +32,7 @@ export function createWorkInboxMcpServer(
           outcome.answer !== null
             ? 'Call acknowledge_answer with this id, then continue using the answer.'
             : outcome.cancelled
-              ? 'The question was cancelled. Do not treat this as approval.'
+              ? 'The user closed the question without providing an answer. This is not approval; do not choose a suggested option.'
               : 'Call wait_for_answer with this id. Do not create another question.'
       }
       return {
@@ -57,8 +61,7 @@ export function createWorkInboxMcpServer(
   server.registerTool(
     'ask_user',
     {
-      description:
-        'Ask the human through Orca Work Inbox from an Orca agent. Supply a fresh UUID request_id for each immutable question; reuse the ID and identical arguments after an uncertain send. For pending results, call wait_for_answer on the same id. When answered, call acknowledge_answer and continue the task. Pending is never approval.',
+      description: `${WORK_INBOX_ROUTING_INSTRUCTIONS} Supply a fresh UUID request_id for each immutable question. Choosing an option only edits a draft; the human explicitly sends the answer.`,
       inputSchema: {
         request_id: z.string().uuid(),
         question: z.string().trim().min(1).max(8000),

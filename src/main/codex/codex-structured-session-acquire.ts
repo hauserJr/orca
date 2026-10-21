@@ -45,6 +45,8 @@ import type { CodexStructuredSessionTeardown } from './codex-structured-session-
 import type { CodexStructuredNotificationRetry } from './codex-structured-notification-retry'
 import type { deliverCodexServerRequest } from './codex-structured-provider-events'
 import { codexAcquisitionNotificationHandler } from './codex-structured-acquisition-notification'
+import { codexWorkInboxLaunchArgs } from './codex-work-inbox-launch'
+import { WORK_INBOX_ROUTING_INSTRUCTIONS } from '../../shared/work-inbox-routing-instructions'
 
 export async function acquireCodexStructuredSession(input: {
   input: StructuredAgentSessionAcquireInput
@@ -127,7 +129,7 @@ export async function acquireCodexStructuredSession(input: {
     const connection = await open(
       {
         command: launch.command,
-        args: launch.args,
+        args: [...codexWorkInboxLaunchArgs(), ...(launch.args ?? [])],
         cwd: launch.cwd,
         ...(launch.env ? { env: launch.env } : {}),
         ...(launch.envToDelete ? { envToDelete: launch.envToDelete } : {})
@@ -194,6 +196,21 @@ export async function acquireCodexStructuredSession(input: {
     })
     acquisitions.assertCurrent(sessionId, attempt)
     const opened = await openCodexThread(connection, threadLaunch, deps.requestTimeoutMs)
+    // Append to model-visible history; a resume retains its saved developer instructions.
+    await connection.request(
+      'thread/inject_items',
+      {
+        threadId: opened.threadId,
+        items: [
+          {
+            type: 'message',
+            role: 'developer',
+            content: [{ type: 'input_text', text: WORK_INBOX_ROUTING_INSTRUCTIONS }]
+          }
+        ]
+      },
+      { timeoutMs: deps.requestTimeoutMs }
+    )
     acquisitions.assertCurrent(sessionId, attempt)
     primaryThreadId = opened.threadId
     const restoreAdmission = translator?.restoreThread(opened.threadId, opened.thread ?? {})

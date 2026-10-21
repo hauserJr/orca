@@ -124,6 +124,8 @@ docs/**
 !docs/mobile-terminal-shortcut-bar.md
 !docs/reference/
 !docs/reference/work-inbox.md
+!docs/reference/update-data-preservation.md
+!docs/reference/windows-installer-upgrade-validation.md
 
 # Stably CLI (only docs/ are tracked)
 .stably/*

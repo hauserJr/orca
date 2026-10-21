@@ -17,42 +17,15 @@ import {
 
 export type WorkInboxView = 'open' | 'history'
 export type WorkInboxLoadError = 'unsupported' | 'failed'
-export type WorkInboxFilterOption = { id: string; label: string }
+export type { WorkInboxFilterOption } from './work-inbox-labels'
+import { rememberLabels, sortedOptions, type KnownLabels } from './work-inbox-labels'
+import { useWorkInboxStatus } from './use-work-inbox-status'
 
 export const WORK_INBOX_PAGE_SIZE = 50
 export const WORK_INBOX_REFRESH_MS = 15_000
 
 type ListSnapshot = { queryKey: string; items: WorkInboxItem[] }
-/** Per-host facts that outlive one view or filter: filter labels and the unfiltered open count. */
-type KnownLabels = {
-  targetKey: string
-  projects: Map<string, string>
-  agents: Map<string, string>
-  openCount: number | null
-}
-
-function rememberLabels(
-  known: KnownLabels,
-  items: readonly WorkInboxItem[],
-  openCount: number
-): KnownLabels {
-  const projects = new Map(known.projects)
-  const agents = new Map(known.agents)
-  for (const item of items) {
-    if (item.projectId) {
-      projects.set(item.projectId, item.projectLabel ?? item.projectId)
-    }
-    agents.set(item.agentId, item.agentLabel)
-  }
-  return { targetKey: known.targetKey, projects, agents, openCount }
-}
-
-function sortedOptions(labels: Map<string, string>): WorkInboxFilterOption[] {
-  return [...labels]
-    .map(([id, label]) => ({ id, label }))
-    .sort((a, b) => a.label.localeCompare(b.label))
-}
-
+type AnswerReceipt = { targetKey: string; item: WorkInboxItem; unavailable: boolean }
 export function useWorkInbox({
   open,
   target
@@ -80,6 +53,9 @@ export function useWorkInbox({
   const requestSeq = useRef(0)
   const inFlightAnswers = useRef(new Set<string>())
   const loadingRef = useRef(false)
+  const [receipt, setReceipt] = useState<AnswerReceipt | null>(null)
+  const receiptRef = useRef(receipt)
+  receiptRef.current = receipt
 
   // Why: filters and pages name one host's rows; a host switch must never show them against another.
   const [filtersTargetKey, setFiltersTargetKey] = useState(targetKey)
@@ -92,6 +68,8 @@ export function useWorkInbox({
   }
 
   const queryKey = `${targetKey ?? ''}|${view}|${projectId ?? ''}|${agentId ?? ''}`
+  const queryKeyRef = useRef(queryKey)
+  queryKeyRef.current = queryKey
 
   const load = useCallback(async (): Promise<void> => {
     if (!target || !targetKey) {
@@ -99,25 +77,43 @@ export function useWorkInbox({
     }
     const seq = ++requestSeq.current
     const requestQueryKey = queryKey
+    const countOnly = !open
     loadingRef.current = true
     setLoading(true)
     try {
-      const result = await listWorkInbox(target, {
-        view,
-        ...(projectId ? { projectId } : {}),
-        ...(agentId ? { agentId } : {}),
-        limit
-      })
-      if (seq !== requestSeq.current) {
+      const tracked = receiptRef.current?.targetKey === targetKey ? receiptRef.current : null
+      const [result, confirmation] = await Promise.all([
+        listWorkInbox(
+          target,
+          countOnly
+            ? { view: 'open', limit: 1 }
+            : {
+                view,
+                ...(projectId ? { projectId } : {}),
+                ...(agentId ? { agentId } : {}),
+                limit
+              }
+        ),
+        tracked?.item.status === 'answered'
+          ? listWorkInbox(target, { view: 'history', id: tracked.item.id, limit: 1 })
+              .then(
+                (response) => response.items.find((item) => item.id === tracked.item.id) ?? null
+              )
+              .catch(() => null)
+          : null
+      ])
+      if (seq !== requestSeq.current || queryKeyRef.current !== requestQueryKey) {
         return
       }
-      setList((previous) => ({
-        queryKey: requestQueryKey,
-        items:
-          previous?.queryKey === requestQueryKey
-            ? mergeWorkInboxItems(previous.items, result.items)
-            : result.items
-      }))
+      if (!countOnly) {
+        setList((previous) => ({
+          queryKey: requestQueryKey,
+          items:
+            previous?.queryKey === requestQueryKey
+              ? mergeWorkInboxItems(previous.items, result.items)
+              : result.items
+        }))
+      }
       setKnown((previous) =>
         rememberLabels(
           previous.targetKey === targetKey
@@ -128,6 +124,20 @@ export function useWorkInbox({
         )
       )
       setLoadError(null)
+      if (tracked?.item.status === 'answered') {
+        setReceipt((previous) =>
+          previous?.targetKey === targetKey && previous.item.id === tracked.item.id
+            ? {
+                ...previous,
+                item:
+                  confirmation && confirmation.revision >= previous.item.revision
+                    ? confirmation
+                    : previous.item,
+                unavailable: !confirmation
+              }
+            : previous
+        )
+      }
     } catch (error) {
       if (seq !== requestSeq.current) {
         return
@@ -140,10 +150,10 @@ export function useWorkInbox({
         setLoading(false)
       }
     }
-  }, [target, targetKey, queryKey, view, projectId, agentId, limit])
+  }, [open, target, targetKey, queryKey, view, projectId, agentId, limit])
 
   useEffect(() => {
-    if (!open || !target) {
+    if (!target) {
       return
     }
     void load()
@@ -156,8 +166,19 @@ export function useWorkInbox({
     return () => window.clearInterval(timer)
   }, [open, target, load])
 
+  useEffect(() => {
+    if (receipt?.item.status !== 'delivered') {
+      return
+    }
+    const timer = window.setTimeout(() => setReceipt(null), 5000)
+    return () => window.clearTimeout(timer)
+  }, [receipt])
+
   const visibleList = list?.queryKey === queryKey ? list : null
-  const items = visibleList?.items ?? []
+  const items =
+    visibleList?.items.filter((item) =>
+      view === 'open' ? item.status === 'open' : item.status !== 'open'
+    ) ?? []
   const knownForTarget = known.targetKey === targetKey ? known : null
 
   const projectOptions = useMemo(
@@ -230,6 +251,10 @@ export function useWorkInbox({
         if (result.status === 'ok') {
           setDraft(() => null)
           replaceItem(requestQueryKey, result.item)
+          if (queryKeyRef.current === requestQueryKey) {
+            setReceipt({ targetKey, item: result.item, unavailable: false })
+            void load()
+          }
         } else if (result.status === 'conflict') {
           // Keep the text so the human can reread the current state and answer again if still open.
           setDraft((current) => ({
@@ -255,21 +280,30 @@ export function useWorkInbox({
         inFlightAnswers.current.delete(key)
       }
     },
-    [target, targetKey, drafts, queryKey, replaceItem]
+    [target, targetKey, drafts, queryKey, replaceItem, load]
   )
 
+  const statusActions = useWorkInboxStatus(target, load, (item) => replaceItem(queryKey, item))
   const showMore = useCallback((): void => {
     setLimit((current) => Math.min(current + WORK_INBOX_PAGE_SIZE, WORK_INBOX_LIST_MAX))
   }, [])
 
   return {
+    target,
     view,
     setView,
+    statusActions,
     projectId,
     setProjectId,
     agentId,
     setAgentId,
     items,
+    receipt:
+      receipt?.targetKey === targetKey &&
+      (!projectId || receipt.item.projectId === projectId) &&
+      (!agentId || receipt.item.agentId === agentId)
+        ? receipt
+        : null,
     openCount: knownForTarget?.openCount ?? null,
     hasLoaded: visibleList !== null,
     loading,

@@ -1,4 +1,4 @@
-import { buildAgentStartupPlan, planAgentCliArgsSuffix } from '@/lib/tui-agent-startup'
+import { buildAgentStartupPlan, planAgentCliArgsSuffix } from '@/lib/managed-agent-startup'
 import { CLIENT_PLATFORM } from '@/lib/new-workspace'
 import { isTuiAgentEnabled } from '../../../shared/tui-agent-selection'
 import type { TuiAgent } from '../../../shared/tui-agent'

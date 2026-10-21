@@ -10,7 +10,11 @@ import { isTuiAgentEnabled, pickTuiAgent } from '../../shared/tui-agent-selectio
 import { resolveAgentStartupPlanInputs } from '../../shared/agent-startup-plan-inputs'
 import type { AgentLaunchRuntime } from '../../shared/agent-launch-runtime'
 import type { resolveStartupAgentLaunchRuntime } from './agent-launch-scope-runtime'
-import { buildAgentDraftLaunchPlan, buildAgentStartupPlan } from '../../shared/tui-agent-startup'
+import { withWorkInboxRoutingPrompt } from '../../shared/work-inbox-routing-instructions'
+import {
+  buildAgentDraftLaunchPlan,
+  buildAgentStartupPlan
+} from '../../shared/managed-agent-startup'
 import { planStartupWithPromptCandidate } from '../../shared/startup-line-prompt-carry'
 import {
   launchHostProvesAgentInFront,
@@ -172,7 +176,7 @@ export function buildWorktreeStartupForAgent(
     ...(environment.extraAgentArgs ? { extraAgentArgs: environment.extraAgentArgs } : {}),
     sessionOptions: environment.toSessionOptions(environment.launchPreferences)
   })
-  const prompt = environment.prompt ?? ''
+  const prompt = withWorkInboxRoutingPrompt(environment.prompt ?? '')
   let startupPlan: ReturnType<typeof buildAgentStartupPlan>
   if (environment.onPromptCarry) {
     const offered = planStartupWithPromptCandidate(planInputs, prompt, {

@@ -1,7 +1,10 @@
 import React from 'react'
+import { X } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { WorkInboxItem, WorkInboxStatus } from '../../../../shared/work-inbox'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { translate } from '@/i18n/i18n'
@@ -15,17 +18,12 @@ import {
 function statusLabel(status: WorkInboxStatus): string {
   switch (status) {
     case 'open':
-      return translate('auto.components.work-inbox.status.open', 'Waiting for your answer')
+      return translate('auto.components.work-inbox.status.open', 'Unanswered')
     case 'answered':
-      // Why: saved is not consumed; the agent has not picked it up yet.
-      return translate(
-        'auto.components.work-inbox.status.answered',
-        'Answer saved, not yet received by agent'
-      )
     case 'delivered':
-      return translate('auto.components.work-inbox.status.delivered', 'Received by agent')
+      return translate('auto.components.work-inbox.status.answered', 'Answered')
     case 'cancelled':
-      return translate('auto.components.work-inbox.status.cancelled', 'Cancelled')
+      return translate('auto.components.work-inbox.status.cancelled', 'Closed without an answer')
   }
 }
 
@@ -59,21 +57,30 @@ export function WorkInboxItemCard({
   draft,
   now,
   onDraftChange,
-  onSubmit
+  onSubmit,
+  onStatusChange,
+  statusBusy,
+  statusFailed
 }: {
   item: WorkInboxItem
   draft: WorkInboxDraft
   now: number
   onDraftChange: (patch: Partial<Pick<WorkInboxDraft, 'optionId' | 'text'>>) => void
   onSubmit: () => void
+  onStatusChange: () => void
+  statusBusy?: boolean
+  statusFailed?: boolean
 }): React.JSX.Element {
   const textId = `work-inbox-answer-${item.id}`
   const errorId = `work-inbox-error-${item.id}`
   const isOpen = item.status === 'open'
   const canSubmit = canSubmitWorkInboxDraft(item, draft)
-  const locked = isWorkInboxDraftLocked(draft)
+  const locked = isWorkInboxDraftLocked(draft) || statusBusy
+  const closeLabel = translate(
+    'auto.components.work-inbox.closeQuestion',
+    'Close without answering'
+  )
   const cannotAnswer = isOpen && item.options.length === 0 && !item.allowFreeText
-  const selectedOption = item.options.find((option) => option.id === draft.optionId) ?? null
 
   return (
     <article
@@ -85,10 +92,55 @@ export function WorkInboxItemCard({
         <span className="font-medium text-foreground">{item.agentLabel}</span>
         {item.projectLabel ? <span>{item.projectLabel}</span> : null}
         <span>{formatUiRelativeTime(item.createdAt - now)}</span>
-        <Badge variant={isOpen ? 'default' : 'outline'} className="ml-auto">
-          {statusLabel(item.status)}
-        </Badge>
+        <div className="ml-auto flex flex-wrap gap-2" role="status">
+          <Badge variant={isOpen ? 'default' : 'outline'}>{statusLabel(item.status)}</Badge>
+          {item.status === 'answered' || item.status === 'delivered' ? (
+            <Badge variant="outline">
+              {item.status === 'delivered'
+                ? translate('auto.components.work-inbox.status.delivered', 'Agent received')
+                : translate(
+                    'auto.components.work-inbox.status.awaitingReceipt',
+                    'Waiting for agent'
+                  )}
+            </Badge>
+          ) : null}
+        </div>
+        {isOpen ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={closeLabel}
+                disabled={locked}
+                onClick={onStatusChange}
+              >
+                <X />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{closeLabel}</TooltipContent>
+          </Tooltip>
+        ) : item.status === 'cancelled' ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={statusBusy}
+            onClick={onStatusChange}
+          >
+            {translate('auto.components.work-inbox.reopen', 'Reopen question')}
+          </Button>
+        ) : null}
       </header>
+      {statusFailed ? (
+        <p role="alert" className="text-xs text-destructive">
+          {translate(
+            'auto.components.work-inbox.statusFailed',
+            'Could not confirm the change. Refresh to check its status before trying again.'
+          )}
+        </p>
+      ) : null}
       <p
         id={`work-inbox-question-${item.id}`}
         className="text-sm whitespace-pre-wrap break-words text-foreground"
@@ -112,28 +164,42 @@ export function WorkInboxItemCard({
         <div
           role="group"
           aria-label={translate('auto.components.work-inbox.options', 'Answer options')}
-          className="flex flex-wrap gap-2"
+          className="space-y-2"
         >
           {item.options.map((option) => {
             const selected = draft.optionId === option.id
             return (
-              <Button
+              <label
                 key={option.id}
-                type="button"
-                size="sm"
-                variant={selected ? 'secondary' : 'outline'}
-                aria-pressed={selected}
-                disabled={locked}
-                onClick={() => onDraftChange({ optionId: selected ? null : option.id })}
+                className="flex cursor-pointer items-start gap-3 rounded-md border border-border px-3 py-2 text-sm has-data-[state=checked]:bg-accent"
               >
-                {option.label}
-              </Button>
+                <Checkbox
+                  checked={selected}
+                  disabled={locked}
+                  className="mt-0.5"
+                  aria-label={option.label}
+                  onCheckedChange={() => onDraftChange({ optionId: selected ? null : option.id })}
+                />
+                <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+                  {option.label}
+                  {option.description ? (
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {option.description}
+                    </span>
+                  ) : null}
+                </span>
+              </label>
             )
           })}
         </div>
       ) : null}
-      {isOpen && selectedOption?.description ? (
-        <p className="text-xs text-muted-foreground">{selectedOption.description}</p>
+      {isOpen && item.options.length > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {translate(
+            'auto.components.work-inbox.selectionHint',
+            'Choose one option, then send your answer.'
+          )}
+        </p>
       ) : null}
 
       {isOpen && item.allowFreeText ? (
@@ -179,15 +245,15 @@ export function WorkInboxItemCard({
           <Button
             type="button"
             size="sm"
-            className="w-24"
-            disabled={!canSubmit}
+            className="w-36"
+            disabled={!canSubmit || statusBusy}
             aria-busy={draft.submitting}
             onClick={onSubmit}
           >
             {draft.submitting ? <LoadingSpinner className="size-4" /> : null}
             {draft.failure === 'unreachable'
               ? translate('auto.components.work-inbox.retry', 'Retry')
-              : translate('auto.components.work-inbox.send', 'Send')}
+              : translate('auto.components.work-inbox.send', 'Send answer')}
           </Button>
         </div>
       ) : null}

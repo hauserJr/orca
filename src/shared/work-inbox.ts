@@ -42,6 +42,8 @@ export const WORK_INBOX_OPTIONS_MAX = 20
 export const WORK_INBOX_OPTION_MAX_LENGTH = 256
 
 export const WorkInboxListParams = z.object({
+  /** Optional exact read for a recent answer outside the bounded history page. */
+  id: z.string().min(1).max(256).optional(),
   view: z.enum(['open', 'history']).optional(),
   projectId: z.string().min(1).max(256).optional(),
   agentId: z.string().min(1).max(256).optional(),
@@ -109,6 +111,7 @@ export type WorkInboxAckParams = z.infer<typeof WorkInboxAckParams>
 /** What the asking agent receives. `answer` is set once `status` is `answered` or `delivered`;
  *  the agent then calls `workInbox.ack`, which moves `answered` to `delivered`. */
 export type WorkInboxAskResult = {
+  message?: string
   id: string
   status: WorkInboxStatus
   answer: WorkInboxAnswer | null

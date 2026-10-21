@@ -27,7 +27,13 @@ function askResult(item: WorkInboxItem, timeoutMs: number, timedOut: boolean): W
     answer: answered ? (item.answer ?? null) : null,
     timedOut,
     cancelled: item.status === 'cancelled',
-    timeoutMs
+    timeoutMs,
+    ...(item.status === 'cancelled'
+      ? {
+          message:
+            'The user closed the question without providing an answer. This is not approval; do not choose a suggested option.'
+        }
+      : {})
   }
 }
 
@@ -80,6 +86,19 @@ export const WORK_INBOX_METHODS = [
     handler: async (params, ctx) => {
       assertHumanCaller(ctx)
       const result = workInboxStoreFor(ctx.runtime.getOrchestrationDb()).cancel(params, Date.now())
+      if (result.status === 'ok') {
+        wakeWorkInboxWaiters(params.id)
+      }
+      return result
+    }
+  }),
+  defineMethod({
+    name: 'workInbox.reopen',
+    permission: 'workspace',
+    params: WorkInboxCancelParams,
+    handler: async (params, ctx) => {
+      assertHumanCaller(ctx)
+      const result = workInboxStoreFor(ctx.runtime.getOrchestrationDb()).reopen(params)
       if (result.status === 'ok') {
         wakeWorkInboxWaiters(params.id)
       }
@@ -140,6 +159,10 @@ export const WORK_INBOX_METHODS = [
             'work_inbox_item_not_found',
             `Work inbox item ${item.id} was removed while waiting.`
           )
+        }
+        // A quick reopen must not erase the closure observed by this waiting agent.
+        if (current.cancelledAt !== item.cancelledAt && current.cancelledAt !== undefined) {
+          return askResult({ ...current, status: 'cancelled', answer: undefined }, timeoutMs, false)
         }
         if (current.status !== 'open') {
           return askResult(current, timeoutMs, false)

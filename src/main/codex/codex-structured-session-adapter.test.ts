@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { WORK_INBOX_ROUTING_INSTRUCTIONS } from '../../shared/work-inbox-routing-instructions'
 import {
   CodexAppServerRequestError,
   type openCodexAppServerConnection
@@ -43,6 +44,7 @@ describe('CodexStructuredSessionAdapter.acquire', () => {
     })
     expect(codex.connections[0].calls.map((call) => call.method)).toEqual([
       'thread/start',
+      'thread/inject_items',
       'model/list'
     ])
   })
@@ -152,7 +154,11 @@ describe('CodexStructuredSessionAdapter.acquire', () => {
       CODEX_HOME: '/codex/home',
       ORCA_AGENT_SESSION_ID: 'session-1',
       ORCA_STRUCTURED_SESSION: '1',
-      ORCA_CLI_COMMAND: expect.stringMatching(/^[^:;]*[\\/]cli[\\/]bin[\\/]orca-dev$/),
+      ORCA_CLI_COMMAND: expect.stringMatching(
+        process.platform === 'win32'
+          ? /^[^;]*[\\/]cli[\\/]bin[\\/]orca-dev\.cmd$/
+          : /^[^:;]*[\\/]cli[\\/]bin[\\/]orca-dev$/
+      ),
       ...(process.platform !== 'win32'
         ? { ORCA_CLI_BIN_DIR: expect.stringMatching(/^[^:;]*[\\/]cli[\\/]bin$/) }
         : {}),
@@ -161,7 +167,9 @@ describe('CodexStructuredSessionAdapter.acquire', () => {
       ORCA_PAIRING_CODE: '',
       ORCA_REMOTE_PAIRING: '',
       // The test host is unpackaged, so this app's CLI is the dev launcher dir, first on PATH.
-      PATH: expect.stringMatching(/^[^:;]*[\\/]cli[\\/]bin[:;]/)
+      PATH: expect.stringMatching(
+        process.platform === 'win32' ? /^[^;]*[\\/]cli[\\/]bin;/ : /^[^:;]*[\\/]cli[\\/]bin:/
+      )
     })
     expect(codex.connections[0].launch.cwd).toBe('/work/repo')
     expect(codex.connections[0].calls[0]).toEqual({
@@ -172,6 +180,19 @@ describe('CodexStructuredSessionAdapter.acquire', () => {
         approvalPolicy: 'on-request',
         sandbox: 'workspace-write',
         approvalsReviewer: 'user'
+      }
+    })
+    expect(codex.connections[0].calls[1]).toEqual({
+      method: 'thread/inject_items',
+      params: {
+        threadId: THREAD_ID,
+        items: [
+          {
+            type: 'message',
+            role: 'developer',
+            content: [{ type: 'input_text', text: WORK_INBOX_ROUTING_INSTRUCTIONS }]
+          }
+        ]
       }
     })
     expect(acquisition.process).toEqual({
@@ -200,7 +221,10 @@ describe('CodexStructuredSessionAdapter.acquire', () => {
 
     expect(codex.connections[0].calls[0]).toEqual({
       method: 'thread/start',
-      params: { cwd: '/work/repo', model: 'gpt-chosen' }
+      params: {
+        cwd: '/work/repo',
+        model: 'gpt-chosen'
+      }
     })
   })
 
@@ -250,9 +274,10 @@ describe('CodexStructuredSessionAdapter.acquire', () => {
       spawnToken: 'spawn-9'
     })
 
-    expect(codex.connections[0].calls.slice(0, 2).map((call) => call.method)).toEqual([
+    expect(codex.connections[0].calls.slice(0, 3).map((call) => call.method)).toEqual([
       'thread/resume',
-      'thread/start'
+      'thread/start',
+      'thread/inject_items'
     ])
     expect(acquisition.link).toEqual({
       linkId: `codex-9-${THREAD_ID}`,

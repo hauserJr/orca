@@ -1,3 +1,7 @@
+import {
+  isRemoteForegroundEvidence,
+  type RemoteForegroundEvidence
+} from '../foreground-process-evidence'
 import { z } from 'zod'
 import { TERMINAL_KITTY_FILE_MAX_BYTES } from '../terminal-kitty-file'
 import { OptionalFiniteNumber, OptionalString, requiredString } from './rpc-param-primitives'
@@ -147,7 +151,10 @@ export const TerminalSend = TerminalHandle.extend({
       createdAt: z.number().finite()
     })
     .optional(),
-  requireAgentStatus: z.enum(['sendable']).optional(),
+  requireAgentStatus: z.enum(['sendable', 'idle']).optional(),
+  expectedWorkInboxProcess: z
+    .custom<RemoteForegroundEvidence>(isRemoteForegroundEvidence)
+    .optional(),
   // Why: terminal-generated replies are valid input but must not transfer the shared terminal floor.
   inputKind: z.enum(['query-reply']).optional(),
   // Why: identifies the caller for the driver state machine; when absent (older clients) the server falls back to the most recent mobile actor (docs/mobile-presence-lock.md).

@@ -44,6 +44,9 @@
 !macroend
 
 !macro customInstall
+  !ifmacrodef orcaRestoreTest2Profile
+    !insertmacro orcaRestoreTest2Profile
+  !endif
   !insertmacro ORCA_REGISTER_DOCUMENT_PROGID "${MARKDOWN_PROGID}" "Markdown Document"
   !insertmacro ORCA_REGISTER_DOCUMENT_PROGID "${TABULAR_PROGID}" "Tabular Document"
   !insertmacro ORCA_REGISTER_DOCUMENT_OPEN_WITH ".md" "${MARKDOWN_PROGID}"

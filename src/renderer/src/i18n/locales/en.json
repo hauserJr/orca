@@ -18124,11 +18124,18 @@
         "19af906d12": "Save filter"
       },
       "work-inbox": {
+        "closeQuestion": "Close without answering",
+        "reopen": "Reopen question",
+        "statusFailed": "Could not confirm the change. Refresh to check its status before trying again.",
+        "view": "Question list",
+        "pending": "Unanswered",
+        "history": "History",
         "status": {
-          "open": "Waiting for your answer",
-          "answered": "Answer saved, not yet received by agent",
-          "delivered": "Received by agent",
-          "cancelled": "Cancelled"
+          "open": "Unanswered",
+          "answered": "Answered",
+          "delivered": "Agent received",
+          "awaitingReceipt": "Waiting for agent",
+          "cancelled": "Closed without an answer"
         },
         "error": {
           "conflict": "This question changed before your answer was saved. Your draft is kept; review the current state above.",
@@ -18141,13 +18148,16 @@
         "answerLabel": "Answer",
         "noAnswerShape": "This question has no options and does not accept text.",
         "retry": "Retry",
-        "send": "Send",
+        "send": "Send answer",
+        "selectionHint": "Choose one option, then send your answer.",
+        "answerProgress": "Answer progress",
+        "receiptUnavailable": "Could not confirm agent receipt. Your saved answer is kept; checking again automatically.",
         "emptyOpen": "No agent is waiting on you. When an agent needs your decision, its question appears here.",
-        "emptyHistory": "No answered questions yet.",
+        "emptyHistory": "No answered or closed questions yet.",
         "title": "Work Inbox",
         "description": "Questions agents asked you. The asking agent continues after it receives your answer.",
-        "tabOpen": "Open",
-        "tabHistory": "History",
+        "tabOpen": "Unanswered",
+        "tabHistory": "Answered / cancelled",
         "filterProject": "Filter by project",
         "allProjects": "All projects",
         "filterAgent": "Filter by agent",
@@ -18158,7 +18168,19 @@
         "loading": "Loading questions…",
         "showMore": "Show more",
         "capped": "Showing the first 200 questions. Filter by project or agent to see the rest.",
-        "sidebarLabel": "Work Inbox"
+        "pin": "Pin to right",
+        "unpin": "Unpin inbox",
+        "resize": "Resize inbox",
+        "sidebarLabel": "Work Inbox",
+        "pendingIndicator": "Unanswered questions",
+        "connectExisting": "Connect an existing agent",
+        "connectSelect": "Existing agent",
+        "connectSend": "Send guidance",
+        "connectCheck": "Check delivery",
+        "connectUnavailable": "Could not confirm an idle agent. Finish its current prompt in the terminal, then try again.",
+        "connectLocalOnly": "Open Work Inbox on the computer running the agent to connect an existing conversation.",
+        "connectSent": "Routing guidance sent. Continue with this same agent; its conversation and account are kept.",
+        "connectUnconfirmed": "Could not confirm delivery. Check the agent before sending routing guidance again."
       }
     },
     "i18n": {

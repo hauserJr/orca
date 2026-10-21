@@ -5,13 +5,19 @@ import type {
   RuntimeRendererSyncWindowGraph,
   RuntimeStatus,
   RuntimeSyncWindowGraphResult,
+  RuntimeTerminalSend,
   RuntimeTerminalDriverState
 } from '../../shared/runtime-types'
 import type { RuntimeRpcResponse } from '../../shared/runtime-rpc-envelope'
 import type { RuntimeEnvironmentSubscriptionHandle } from '../runtime-environment-subscriptions'
 import type { PreloadApi } from '../api-types'
+import type { WorkInboxGuidanceParams } from '../../shared/work-inbox-guidance'
 
 export const runtimeApi = {
+  sendWorkInboxGuidance: (
+    args: WorkInboxGuidanceParams
+  ): Promise<RuntimeRpcResponse<{ send: RuntimeTerminalSend }>> =>
+    ipcRenderer.invoke('runtime:sendWorkInboxGuidance', args),
   syncWindowGraph: (graph: RuntimeRendererSyncWindowGraph): Promise<RuntimeSyncWindowGraphResult> =>
     ipcRenderer.invoke('runtime:syncWindowGraph', graph),
   getStatus: (): Promise<RuntimeStatus> => ipcRenderer.invoke('runtime:getStatus'),

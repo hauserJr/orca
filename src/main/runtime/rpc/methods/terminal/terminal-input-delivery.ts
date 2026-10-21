@@ -127,13 +127,16 @@ export async function commitMobileInputFloorClaim(
 
 export function getTerminalSendGuardRefusedReason(
   error: unknown
-): 'no-agent' | 'permission' | undefined {
+): 'no-agent' | 'permission' | 'busy' | undefined {
   const message = error instanceof Error ? error.message : String(error)
   if (message.includes('terminal_guard_permission')) {
     return 'permission'
   }
   if (message.includes('terminal_guard_no_agent')) {
     return 'no-agent'
+  }
+  if (message.includes('terminal_guard_busy')) {
+    return 'busy'
   }
   return undefined
 }

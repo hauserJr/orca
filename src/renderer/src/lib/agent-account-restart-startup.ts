@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store'
-import { buildAgentResumeStartupPlan } from '@/lib/tui-agent-startup'
+import { buildAgentResumeStartupPlan } from '@/lib/managed-agent-startup'
 import {
   resolveSshHostReportedPlatform,
   resolveAgentResumeLaunchTarget

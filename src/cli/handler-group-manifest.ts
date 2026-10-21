@@ -22,7 +22,7 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
   },
   {
     name: 'work-inbox-ask',
-    keys: ['inbox ask'],
+    keys: ['inbox ask', 'inbox ack'],
     load: async () => (await import('./handlers/work-inbox-ask.js')).WORK_INBOX_ASK_HANDLERS
   },
   JIRA_HANDLER_GROUP,

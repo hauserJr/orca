@@ -1,3 +1,4 @@
+import { WORK_INBOX_CLI_PROMPT } from '../../shared/work-inbox-routing-instructions'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Repo } from '../../shared/repo-types'
 import { tuiAgentToAgentKind } from '../../shared/agent-kind'
@@ -131,7 +132,7 @@ it('quotes a worktree startup for its fact, not the Settings shell, and hands th
     getLaunchRuntime: () => ({ platform: 'win32', shell: 'powershell', launchRuntime }),
     toSessionOptions: () => undefined
   })
-  expect(result.startup.command).toContain("'fix Bob''s bug'")
+  expect(result.startup.command).toContain(`'${WORK_INBOX_CLI_PROMPT} fix Bob''s bug'`)
   expect(result.launchRuntime).toBe(launchRuntime)
 })
 
@@ -157,9 +158,15 @@ describe('buildWorktreeStartupForAgent prompt carry', () => {
     const onPromptCarry = vi.fn()
     const result = build(onPromptCarry)
 
-    expect(result.startup.command).not.toContain('summarize')
+    // Windows has no foreground proof, even when a fixture describes a Linux launch.
+    if (process.platform === 'win32') {
+      expect(result.startup.command).toContain('summarize the diff')
+      expect(onPromptCarry).toHaveBeenCalledWith(true)
+    } else {
+      expect(result.startup.command).not.toContain('summarize')
+      expect(onPromptCarry).toHaveBeenCalledWith(false)
+    }
     expect(result.followup).toBeUndefined()
-    expect(onPromptCarry).toHaveBeenCalledWith(false)
   })
 
   it('carries a short-lined multi-line prompt on a local zsh line, as main typed it', () => {
@@ -180,7 +187,7 @@ describe('buildWorktreeStartupForAgent prompt carry', () => {
 // launch the agent exactly as it did when handed the blank text itself.
 describe('buildWorktreeStartupForAgent blank prompt', () => {
   it.each(['claude', 'aider'] as const)(
-    'launches %s bare for an absent or blank prompt',
+    'loads built-in input guidance and waits for work for a blank %s prompt',
     (agent) => {
       const build = (prompt?: string) =>
         buildWorktreeStartupForAgent({
@@ -193,7 +200,9 @@ describe('buildWorktreeStartupForAgent blank prompt', () => {
         })
 
       const bare = build()
-      expect(bare.followup).toBeUndefined()
+      const delivered = bare.followup?.prompt ?? bare.startup.command
+      expect(delivered).toContain('orca inbox ask')
+      expect(delivered).toContain('wait for the user. Do not begin additional work.')
       expect(build('')).toEqual(bare)
       expect(build('  \n ')).toEqual(bare)
     }
@@ -273,7 +282,7 @@ describe('buildWorktreeStartupForAgent extra agent args', () => {
     })
 
     expect(result.startup.command).toBe(
-      "claude '--dangerously-skip-permissions' '--model' 'opus' 'go'"
+      `claude '--dangerously-skip-permissions' '--model' 'opus' '${WORK_INBOX_CLI_PROMPT} go'`
     )
   })
 

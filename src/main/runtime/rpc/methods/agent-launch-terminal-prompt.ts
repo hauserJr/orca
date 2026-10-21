@@ -21,6 +21,7 @@
  * delivers a preamble through exactly this pair of calls.
  */
 
+import { withWorkInboxRoutingPrompt } from '../../../../shared/work-inbox-routing-instructions'
 import { randomUUID } from 'node:crypto'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import type { RuntimeTerminalWait } from '../../../../shared/runtime-terminal-contracts'
@@ -126,20 +127,24 @@ export async function deliverTerminalAgentLaunchPrompt(args: {
       )
       return false
     }
-    const sent = await args.runtime.sendTerminalAgentPrompt(args.handle, args.text, {
-      inputKind: 'launch',
-      // A fresh launch's composer was just seen ready; a reused pane's state is only inferred.
-      composerReady: args.freshLaunch,
-      beforeWrite: guard.beforeWrite,
-      // Paired: together these take the queued path, which settles an unobserved turn start into
-      // an `input_accepted` receipt rather than raising it. Without the id the write is verified
-      // strictly and a slow first turn throws.
-      acceptQueued: true,
-      requestId: randomUUID(),
-      // The launch reply should not wait out a turn that has already been handed over; what the
-      // agent does with the text is the pane's to show, and no receipt arm claims it.
-      observationTimeoutMs: 0
-    })
+    const sent = await args.runtime.sendTerminalAgentPrompt(
+      args.handle,
+      withWorkInboxRoutingPrompt(args.text),
+      {
+        inputKind: 'launch',
+        // A fresh launch's composer was just seen ready; a reused pane's state is only inferred.
+        composerReady: args.freshLaunch,
+        beforeWrite: guard.beforeWrite,
+        // Paired: together these take the queued path, which settles an unobserved turn start into
+        // an `input_accepted` receipt rather than raising it. Without the id the write is verified
+        // strictly and a slow first turn throws.
+        acceptQueued: true,
+        requestId: randomUUID(),
+        // The launch reply should not wait out a turn that has already been handed over; what the
+        // agent does with the text is the pane's to show, and no receipt arm claims it.
+        observationTimeoutMs: 0
+      }
+    )
     return sent.accepted
   } catch (error) {
     if (isAgentPromptStalledError(error)) {

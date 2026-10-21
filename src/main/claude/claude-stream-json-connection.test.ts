@@ -20,7 +20,10 @@ import { createClaudeJournalTranslator } from './claude-structured-journal-trans
 import { readClaudeStructuredSessionOptions } from './claude-structured-session-options'
 import type { ClaudeSession } from './claude-structured-session-state'
 import { CLAUDE_STRUCTURED_BASE_OPTIONS } from './claude-structured-launch-resolution'
-import { openTestJournalHostDatabase } from '../native-chat/agent-session-journal/journal-host-database-test-support'
+import {
+  openTestJournalHostDatabase,
+  closeTestJournalHostDatabases
+} from '../native-chat/agent-session-journal/journal-host-database-test-support'
 import { testEventSinkLogging } from '../native-chat/agent-session-wire/structured-agent-session-logger-test-support'
 import { claudeProviderHandle } from '../../shared/agent-session-provider-handle-encoding'
 import { providerExecutableMissing } from '../provider-process/provider-executable-missing'
@@ -48,6 +51,7 @@ afterEach(async () => {
     await connection.close()
   }
   await Promise.all(childClosures.splice(0))
+  closeTestJournalHostDatabases()
   for (const dir of scratchDirs.splice(0)) {
     rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })
   }
@@ -434,8 +438,7 @@ describe('Claude stream-json connection', () => {
         item.body.kind === 'status' && item.body.providerFrame ? [item.body.providerFrame.kind] : []
       )
     ).toEqual([])
-    // The journal owns a SQLite connection now; afterEach removes this temp root and an open
-    // handle blocks that on Windows.
+    // The chat drains here; afterEach closes the host-owned SQLite connection before cleanup.
     await journal.close()
   })
 

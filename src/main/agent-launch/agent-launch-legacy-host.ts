@@ -11,7 +11,7 @@ import type {
   AgentLaunchPromptDisposal,
   AgentLaunchResult
 } from '../../shared/agent-launch-intent'
-import { agentPromptRidesLaunchCommand } from '../../shared/tui-agent-startup'
+import { agentPromptRidesLaunchCommand } from '../../shared/managed-agent-startup'
 import type { AgentLaunchExecution, AgentLaunchLegacyHostExecution } from './agent-launch-execution'
 import type { AgentLaunchModeReceipt } from './agent-launch-mode'
 import {

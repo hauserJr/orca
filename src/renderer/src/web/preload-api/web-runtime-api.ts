@@ -10,6 +10,9 @@ import { noopUnsubscribe } from './web-storage'
 
 export function createWebRuntimeApi(): NonNullable<Partial<PreloadApi>['runtime']> {
   return {
+    sendWorkInboxGuidance: async () => {
+      throw new Error('work_inbox_guidance_local_only')
+    },
     syncWindowGraph: async (_graph: RuntimeSyncWindowGraph) => getRemoteRuntimeStatus(),
     getStatus: () => getRemoteRuntimeStatus(),
     call: ({ method, params }) => callRuntimeEnvelope(method, params),

@@ -3,7 +3,7 @@ import type {
   ResumableTuiAgent,
   SleepingAgentSessionRecord
 } from '../../../../../shared/agent-session-resume'
-import type { buildAgentResumeStartupPlan } from '@/lib/tui-agent-startup'
+import type { buildAgentResumeStartupPlan } from '@/lib/managed-agent-startup'
 
 export type PendingStartupCommand = {
   command: string

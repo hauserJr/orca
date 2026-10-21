@@ -23,7 +23,7 @@ import { LEGACY_TERMINAL_SHIM_REMOTE_ENV_KEYS } from '../../../pty/legacy-termin
 import { PI_PROCESS_OWNER_ENV_KEYS } from '../../../pty/pi-process-owner-env'
 import { resolveConfiguredTerminalShellArgs } from '../configured-terminal-shell-args'
 import { withCodexTerminalServerIsolationEnv } from '../../../../shared/codex-terminal-server-isolation'
-import { planCodexNoDaemonLaunch } from '../../../pty/codex-no-daemon-launch-command'
+import { prepareAgentWorkInboxLaunch } from '../../../runtime/work-inbox/work-inbox-agent-launch'
 import { resolveStablePaneOwner } from '../pane/stable-owner'
 import { getStartupTerminalIngressIntent } from '../../terminal-startup-color-query-replies'
 import {
@@ -116,17 +116,20 @@ export async function buildRuntimePtySpawnOptions(
   ctx.launchCommand = openCodeLaunch.command
   ctx.spawnOptions.env = ctx.env
   promoteAgentTeamsShimPath(ctx.env, ctx.requestedAgentTeamsPath)
-  const noDaemonLaunch = planCodexNoDaemonLaunch({
+  const inboxLaunch = await prepareAgentWorkInboxLaunch({
     command: ctx.launchCommand,
-    executesOnThisHost: !args.connectionId && ctx.codexSelectionTarget.runtime !== 'wsl',
+    agent: args.launchAgent,
     shellOverride: ctx.daemonShellOverride,
+    remote: Boolean(args.connectionId) || ctx.codexSelectionTarget.runtime === 'wsl',
+    cwd: ctx.cwd,
     env: ctx.env,
     envToDelete: ctx.spawnOptions.envToDelete,
-    cwd: ctx.cwd
+    codexHome: ctx.selectedCodexHomePath
   })
-  const launchCommand = noDaemonLaunch ? await noDaemonLaunch : ctx.launchCommand
-  if (launchCommand !== undefined) {
-    ctx.spawnOptions.command = launchCommand
+  ctx.env = inboxLaunch.env
+  ctx.spawnOptions.env = ctx.env
+  if (inboxLaunch.command !== undefined) {
+    ctx.spawnOptions.command = inboxLaunch.command
   }
   if (args.commandDelivery !== undefined) {
     ctx.spawnOptions.commandDelivery = args.commandDelivery

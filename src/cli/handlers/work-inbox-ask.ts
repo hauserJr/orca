@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { CommandHandler } from '../dispatch'
-import { getOptionalStringFlag } from '../flags'
+import { getOptionalStringFlag, getRequiredStringFlag } from '../flags'
 import { printResult } from '../format'
 import { renderCommand } from '../orchestration-mutation-recovery'
 import { RuntimeClientError } from '../runtime-client'
@@ -10,7 +10,11 @@ import {
   clampOrchestrationAskTimeoutMs,
   resolveOrchestrationAskClientTimeoutMs
 } from '../../shared/orchestration-ask-timeout'
-import type { WorkInboxAnswer, WorkInboxAskResult } from '../../shared/work-inbox'
+import type {
+  WorkInboxAnswer,
+  WorkInboxAskResult,
+  WorkInboxMutationResult
+} from '../../shared/work-inbox'
 import { getOptionalPositiveIntegerValueFlag } from './orchestration/numeric-flags'
 import { flushOrchestrationStdout } from './orchestration/runtime-compatibility'
 import { resolveOrchestrationTerminalHandle } from './orchestration/terminal-identity'
@@ -20,6 +24,22 @@ function formatAnswer(answer: WorkInboxAnswer): string {
 }
 
 export const WORK_INBOX_ASK_HANDLERS: Record<string, CommandHandler> = {
+  'inbox ack': async ({ flags, client, cwd, json }) => {
+    const from =
+      (await resolveOrchestrationTerminalHandle(flags, cwd, client, 'from')) ??
+      injectedSessionAddress()
+    const response = await client.call<WorkInboxMutationResult>('workInbox.ack', {
+      id: getRequiredStringFlag(flags, 'id'),
+      from
+    })
+    if (response.result.status !== 'ok') {
+      throw new RuntimeClientError(
+        'work_inbox_ack_rejected',
+        'The question has no received answer to acknowledge.'
+      )
+    }
+    printResult(response, json, () => 'Answer acknowledged.')
+  },
   'inbox ask': async ({ flags, client, cwd, json }) => {
     const parsedTimeoutMs = getOptionalPositiveIntegerValueFlag(flags, 'timeout-ms')
     const timeoutMs = clampOrchestrationAskTimeoutMs(parsedTimeoutMs)
@@ -38,7 +58,7 @@ export const WORK_INBOX_ASK_HANDLERS: Record<string, CommandHandler> = {
     const requestId = resume
       ? undefined
       : (getOptionalStringFlag(flags, 'request-id') ?? randomUUID())
-    const response = await client
+    let response = await client
       .call<WorkInboxAskResult>(
         'workInbox.ask',
         {
@@ -59,26 +79,66 @@ export const WORK_INBOX_ASK_HANDLERS: Record<string, CommandHandler> = {
         }
         throw error
       })
+    // A host long-poll deadline is not a deadline for the human's answer.
+    while (
+      parsedTimeoutMs === undefined &&
+      response.result.timedOut &&
+      !response.result.answer &&
+      !response.result.cancelled
+    ) {
+      const id = response.result.id
+      response = await client
+        .call<WorkInboxAskResult>(
+          'workInbox.ask',
+          { from, resume: id, timeoutMs },
+          { timeoutMs: resolveOrchestrationAskClientTimeoutMs(timeoutMs) }
+        )
+        .catch((error: unknown) => {
+          console.error(`Keep the question and resume with --resume ${id}`)
+          throw error
+        })
+      if (response.result.id !== id) {
+        throw new RuntimeClientError(
+          'work_inbox_question_changed',
+          'The Inbox returned a different question while waiting.'
+        )
+      }
+    }
     const result = response.result
     if (json) {
       printResult(response, true, () => '')
     } else if (result.answer) {
       console.log(formatAnswer(result.answer))
     }
-    if (result.answer && result.status === 'answered') {
+    if (result.answer && result.status === 'answered' && flags.get('no-ack') !== true) {
       // Why: acknowledge only after the answer reached stdout, so `delivered` means the agent has it.
       await flushOrchestrationStdout()
       try {
-        await client.call('workInbox.ack', { id: result.id, from })
+        const receipt = await client.call<WorkInboxMutationResult>('workInbox.ack', {
+          id: result.id,
+          from
+        })
+        if (receipt.result.status !== 'ok') {
+          throw new RuntimeClientError(
+            'work_inbox_ack_rejected',
+            'The host did not acknowledge the answer receipt.'
+          )
+        }
       } catch (error) {
         console.error(
           `Answer printed, but acknowledging ${result.id} failed: ${error instanceof Error ? error.message : String(error)}`
+        )
+        throw new RuntimeClientError(
+          'work_inbox_receipt_unconfirmed',
+          `Answer already printed; acknowledge its receipt with inbox ack --id ${result.id}. Do not create a new question.`
         )
       }
     }
     if (result.cancelled) {
       if (!json) {
-        console.error(`Question ${result.id} was dismissed in the Work Inbox without an answer.`)
+        console.error(
+          `Question ${result.id}: the user closed it without providing an answer. This is not approval; do not choose a suggested option.`
+        )
       }
       process.exitCode = 1
     } else if (result.timedOut) {

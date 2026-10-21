@@ -1,3 +1,4 @@
+import type { WorkInboxGuidanceParams } from '../../shared/work-inbox-guidance'
 import type { ManagedOrcadPreloadApi } from './managed-orcad-api'
 import type { WslHostsPreloadApi } from './wsl-hosts-api'
 import type { RuntimeHostStatusSnapshot } from '../../shared/runtime-host-status'
@@ -6,6 +7,7 @@ import type {
   RuntimeRendererSyncWindowGraph,
   RuntimeStatus,
   RuntimeSyncWindowGraphResult,
+  RuntimeTerminalSend,
   RuntimeTerminalDriverState
 } from '../../shared/runtime-types'
 import type { RuntimeRpcResponse } from '../../shared/runtime-rpc-envelope'
@@ -26,6 +28,9 @@ export type RuntimeEnvironmentSubscriptionHandle = {
 
 export type RuntimeApi = {
   runtime: {
+    sendWorkInboxGuidance: (
+      args: WorkInboxGuidanceParams
+    ) => Promise<RuntimeRpcResponse<{ send: RuntimeTerminalSend }>>
     syncWindowGraph: (
       graph: RuntimeRendererSyncWindowGraph
     ) => Promise<RuntimeSyncWindowGraphResult>

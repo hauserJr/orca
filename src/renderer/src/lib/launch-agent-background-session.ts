@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store'
 import { runtimeTargetForOwnerEnvironment } from '@/runtime/runtime-client-target'
-import { buildAgentStartupPlan } from '@/lib/tui-agent-startup'
+import { buildAgentStartupPlan } from '@/lib/managed-agent-startup'
 import type {
   LaunchAgentBackgroundSessionArgs,
   LaunchAgentBackgroundSessionResult

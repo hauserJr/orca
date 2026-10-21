@@ -6,7 +6,7 @@ import {
 } from './ai-vault-resume-target'
 import { getAiVaultResumeWorkspaceWslDistro } from './ai-vault-resume-shell'
 import { buildAiVaultResumeCommand } from '../../../shared/ai-vault-resume-command'
-import { buildAgentStartupPlan } from '../../../shared/tui-agent-startup'
+import { buildAgentStartupPlan } from '../../../shared/managed-agent-startup'
 import {
   resolveTuiAgentLaunchArgs,
   resolveTuiAgentLaunchEnv

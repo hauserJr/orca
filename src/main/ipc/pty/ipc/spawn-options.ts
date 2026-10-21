@@ -24,7 +24,7 @@ import { shouldSeedPreAttachPtySize } from '../delivery/attached-pty-size'
 import { getStartupTerminalIngressIntent } from '../../terminal-startup-color-query-replies'
 import { resolveConfiguredTerminalShellArgs } from '../configured-terminal-shell-args'
 import { withCodexTerminalServerIsolationEnv } from '../../../../shared/codex-terminal-server-isolation'
-import { planCodexNoDaemonLaunch } from '../../../pty/codex-no-daemon-launch-command'
+import { prepareAgentWorkInboxLaunch } from '../../../runtime/work-inbox/work-inbox-agent-launch'
 import type { PtyIpcSpawnState } from './spawn-state'
 import { applyAgentWorkspaceTrustToSpawn } from '../../../agent-workspace-trust-spawn'
 import { prepareOpenCodePtyLaunch } from '../../../opencode/opencode-pty-launch'
@@ -93,17 +93,20 @@ export async function buildPtyIpcSpawnOptions(
   if (ctx.combinedEnvToDelete) {
     ctx.spawnOptions.envToDelete = ctx.combinedEnvToDelete
   }
-  const noDaemonLaunch = planCodexNoDaemonLaunch({
+  const inboxLaunch = await prepareAgentWorkInboxLaunch({
     command: ctx.launchCommand,
-    executesOnThisHost: !args.connectionId && ctx.codexSelectionTarget.runtime !== 'wsl',
+    agent: args.launchAgent,
     shellOverride: ctx.effectiveShellOverride,
+    remote: Boolean(args.connectionId) || ctx.codexSelectionTarget.runtime === 'wsl',
+    cwd: ctx.cwd,
     env: ctx.spawnEnv,
     envToDelete: ctx.combinedEnvToDelete,
-    cwd: ctx.cwd
+    codexHome: ctx.selectedCodexHomePath
   })
-  const launchCommand = noDaemonLaunch ? await noDaemonLaunch : ctx.launchCommand
-  if (launchCommand !== undefined) {
-    ctx.spawnOptions.command = launchCommand
+  ctx.spawnEnv = inboxLaunch.env
+  ctx.spawnOptions.env = ctx.spawnEnv
+  if (inboxLaunch.command !== undefined) {
+    ctx.spawnOptions.command = inboxLaunch.command
   }
   if (args.commandDelivery !== undefined) {
     ctx.spawnOptions.commandDelivery = args.commandDelivery

@@ -1,3 +1,4 @@
+import { WORK_INBOX_CLI_PROMPT } from '../../../../shared/work-inbox-routing-instructions'
 /**
  * What the host may claim about a prompt it wrote into somebody's PTY.
  *
@@ -95,7 +96,7 @@ describe('writing a launch prompt into a terminal agent', () => {
     })
     const [handle, text, options] = stub.sendTerminalAgentPrompt.mock.calls[0]!
     expect(handle).toBe('term_1')
-    expect(text).toBe('do the thing')
+    expect(text).toBe(`${WORK_INBOX_CLI_PROMPT} do the thing`)
     // Paired: without both, an unobserved first turn is raised instead of settled, and a slow
     // agent would be reported as undelivered while its prompt sat in the pane.
     expect(options.acceptQueued).toBe(true)

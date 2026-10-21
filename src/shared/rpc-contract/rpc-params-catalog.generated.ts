@@ -1360,6 +1360,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'workInbox.ask': WorkInboxAskParams,
   'workInbox.cancel': WorkInboxCancelParams,
   'workInbox.list': WorkInboxListParams,
+  'workInbox.reopen': WorkInboxCancelParams,
   'workspacePorts.kill': WorkspacePortKillParams,
   'workspacePorts.killHost': WorkspacePortKillHostParams,
   'workspacePorts.scan': WorkspacePortScanParams,

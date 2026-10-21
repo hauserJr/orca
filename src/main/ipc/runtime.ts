@@ -16,6 +16,10 @@ import { DESKTOP_RPC_CALLER } from '../runtime/rpc/rpc-caller-identity'
 import { ALL_RPC_METHODS } from '../runtime/rpc/methods'
 import { DesktopRuntimeSenderLifecycle } from './desktop-runtime-sender-lifecycle'
 import { publishMobileProjectSections } from '../runtime/mobile-project-sections-snapshot'
+import {
+  WorkInboxGuidanceParams,
+  workInboxGuidanceTerminalPrompt
+} from '../../shared/work-inbox-guidance'
 
 function boundTerminalFitRestore(pending: Promise<boolean>): Promise<boolean> {
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -32,6 +36,7 @@ export function registerRuntimeHandlers(runtime: OrcaRuntimeService): void {
   ipcMain.removeHandler('runtime:syncWindowGraph')
   ipcMain.removeHandler('runtime:getStatus')
   ipcMain.removeHandler('runtime:call')
+  ipcMain.removeHandler('runtime:sendWorkInboxGuidance')
   ipcMain.removeHandler('runtime:subscribe')
   ipcMain.removeAllListeners('runtime:unsubscribe')
 
@@ -64,6 +69,28 @@ export function registerRuntimeHandlers(runtime: OrcaRuntimeService): void {
     // the lookup is still running; it refetches status and picks the name up on the next read.
     await runtime.machineNameReady()
     return runtime.getStatus()
+  })
+
+  ipcMain.handle('runtime:sendWorkInboxGuidance', async (event, args: unknown) => {
+    if (event.senderFrame !== event.sender.mainFrame)
+      throw new Error('Runtime RPC call must originate from the current main frame')
+    const params = WorkInboxGuidanceParams.parse(args)
+    return new RpcDispatcher({ runtime, methods: ALL_RPC_METHODS }).dispatch(
+      {
+        id: params.requestId,
+        authToken: 'desktop-ipc',
+        method: 'terminal.send',
+        params: workInboxGuidanceTerminalPrompt(params.terminal, params.expectedProcess),
+        orchestrationRequestId: params.requestId
+      },
+      {
+        clientId: 'desktop-renderer',
+        caller: DESKTOP_RPC_CALLER,
+        clientKind: 'runtime',
+        connectionId: desktopSenders.connectionIdFor(event.sender),
+        clientCapabilities: DESKTOP_RENDERER_RUNTIME_CLIENT_CAPABILITIES
+      }
+    )
   })
 
   ipcMain.handle(

@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store'
 import { createBrowserUuid } from '@/lib/browser-uuid'
-import { buildAgentResumeStartupPlan } from '@/lib/tui-agent-startup'
+import { buildAgentResumeStartupPlan } from '@/lib/managed-agent-startup'
 import {
   resolveSshHostReportedPlatform,
   resolveAgentResumeLaunchTarget

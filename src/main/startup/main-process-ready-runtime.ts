@@ -1,4 +1,5 @@
 import { app, nativeTheme } from 'electron'
+import { startProjectTeams } from './project-team-startup'
 import { randomUUID } from 'node:crypto'
 import { performance } from 'node:perf_hooks'
 import { is } from '@electron-toolkit/utils'
@@ -143,5 +144,8 @@ export async function initializeReadyRuntimeServices(): Promise<void> {
       void handleGpuChildCrash(details.reason, details.exitCode ?? null, crashedAt)
     }
   })
+  runAfterFirstWindowShown(() => {
+    void startProjectTeams().catch(() => console.warn('[project-teams] startup failed'))
+  }, 15000)
   logStartupMilestone('services-initialized')
 }

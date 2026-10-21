@@ -39,12 +39,16 @@ export async function ensureDevLauncher(args: {
     encoding: 'utf8',
     mode: args.platform === 'win32' ? undefined : 0o755
   })
-  if (args.commandName === DEV_COMMAND_NAME && args.platform !== 'win32') {
+  if (args.commandName === DEV_COMMAND_NAME) {
     // Why: dev PTYs prepend this dir to PATH, so keep a local `orca` alias without claiming the global command.
-    await writeFile(join(dirname(launcherPath), 'orca'), content, {
-      encoding: 'utf8',
-      mode: 0o755
-    })
+    await writeFile(
+      join(dirname(launcherPath), args.platform === 'win32' ? 'orca.cmd' : 'orca'),
+      content,
+      {
+        encoding: 'utf8',
+        mode: args.platform === 'win32' ? undefined : 0o755
+      }
+    )
   }
   return launcherPath
 }
@@ -86,6 +90,7 @@ export function buildWindowsDevLauncher(
   userDataPath: string
 ): string {
   return `@echo off
+chcp 65001 >nul
 setlocal
 set "ELECTRON=${escapeWindowsBatchValue(execPathValue)}"
 set "CLI=${escapeWindowsBatchValue(cliEntryPath)}"
@@ -100,15 +105,16 @@ set NODE_OPTIONS=
 set NODE_REPL_EXTERNAL_MODULE=
 set ELECTRON_RUN_AS_NODE=1
 "%ELECTRON%" "%CLI%" %*
-`
+`.replaceAll('\n', '\r\n')
 }
 
 export function buildWindowsForwarder(launcherPath: string): string {
   return `@echo off
+chcp 65001 >nul
 setlocal
 set "ORCA_LAUNCHER=${escapeWindowsBatchValue(launcherPath)}"
 "%ORCA_LAUNCHER%" %*
-`
+`.replaceAll('\n', '\r\n')
 }
 
 export function extractManagedUnixLauncherTarget(content: string): string | null {

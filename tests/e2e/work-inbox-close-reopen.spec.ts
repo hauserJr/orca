@@ -75,6 +75,8 @@ test('question X closes without approval and history reopens the original questi
   await card.getByRole('checkbox', { name: 'Reject', exact: true }).click()
   await card.getByRole('textbox').fill('Wait for review')
   await card.getByRole('button', { name: 'Send answer', exact: true }).click()
+  await expect(orcaPage.getByRole('dialog', { name: 'Work Inbox' })).toBeHidden()
+  await orcaPage.getByRole('button', { name: 'Work Inbox', exact: true }).click()
   await orcaPage.getByRole('tab', { name: 'History', exact: true }).click()
   await expect(card.getByText('Wait for review', { exact: true })).toBeVisible()
   const received = await orcaPage.evaluate(

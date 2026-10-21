@@ -26,6 +26,7 @@ import {
 } from '../sidebar/workspace-chrome-metrics'
 import type { WorkInboxController, WorkInboxFilterOption } from './use-work-inbox'
 import { WorkInboxItemCard } from './WorkInboxItemCard'
+import { openWorkInboxAgent } from './open-work-inbox-agent'
 
 const ALL = '__all__'
 
@@ -199,7 +200,15 @@ export function WorkInboxSheet({
               draft={inbox.getDraft(item.id)}
               now={now}
               onDraftChange={(patch) => inbox.updateDraft(item.id, patch)}
-              onSubmit={() => void inbox.submitAnswer(item)}
+              onSubmit={() => {
+                const target = inbox.target
+                void inbox.submitAnswer(item).then((answered) => {
+                  if (answered && target) {
+                    onOpenChange(false)
+                    void openWorkInboxAgent(answered, target)
+                  }
+                })
+              }}
               onStatusChange={() => void inbox.statusActions.change(item)}
               statusBusy={inbox.statusActions.state(item.id)?.busy}
               statusFailed={inbox.statusActions.state(item.id)?.failed}

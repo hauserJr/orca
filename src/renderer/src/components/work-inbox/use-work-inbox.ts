@@ -36,6 +36,8 @@ export function useWorkInbox({
   target: RuntimeClientTarget | null
 }) {
   const targetKey = target ? workInboxTargetKey(target) : null
+  const openRef = useRef(open)
+  openRef.current = open
   const [view, setView] = useState<WorkInboxView>('open')
   const [projectId, setProjectId] = useState<string | null>(null)
   const [agentId, setAgentId] = useState<string | null>(null)
@@ -223,15 +225,15 @@ export function useWorkInbox({
   }, [])
 
   const submitAnswer = useCallback(
-    async (item: WorkInboxItem): Promise<void> => {
+    async (item: WorkInboxItem): Promise<WorkInboxItem | undefined> => {
       if (!target || !targetKey) {
-        return
+        return undefined
       }
       const key = workInboxDraftKey(targetKey, item.id)
       const draft = drafts[key] ?? EMPTY_WORK_INBOX_DRAFT
       // Why: the ref closes the gap between a click and React committing `submitting`.
       if (inFlightAnswers.current.has(key) || !canSubmitWorkInboxDraft(item, draft)) {
-        return
+        return undefined
       }
       inFlightAnswers.current.add(key)
       const params = buildWorkInboxAnswer(item, draft, createBrowserUuid)
@@ -252,6 +254,7 @@ export function useWorkInbox({
           if (queryKeyRef.current === requestQueryKey) {
             setReceipt({ targetKey, item: result.item, unavailable: false })
             void load()
+            return openRef.current ? result.item : undefined
           }
         } else if (result.status === 'conflict') {
           // Keep the text so the human can reread the current state and answer again if still open.
@@ -277,6 +280,7 @@ export function useWorkInbox({
       } finally {
         inFlightAnswers.current.delete(key)
       }
+      return undefined
     },
     [target, targetKey, drafts, queryKey, replaceItem, load]
   )

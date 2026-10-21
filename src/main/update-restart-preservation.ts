@@ -1,8 +1,7 @@
-import {
-  preserveAgentAuthBeforeRestart,
-  type CodexRuntimeAuthSync
-} from './agent-auth-restart-preservation'
+import type { CodexRuntimeAuthSync } from './agent-auth-restart-preservation'
 import type { Store } from './persistence'
+import { app } from 'electron'
+import { createUpdateProfileSnapshot } from './update-profile-snapshot'
 
 /** Before any update restart, desktop or headless serve: save agent auth, then a full store checkpoint. */
 export async function preserveStateBeforeUpdateRestart({
@@ -12,6 +11,9 @@ export async function preserveStateBeforeUpdateRestart({
   codexRuntimeHome: CodexRuntimeAuthSync | null | undefined
   store: Pick<Store, 'flushPendingOrThrowAsync'>
 }): Promise<void> {
-  await preserveAgentAuthBeforeRestart({ codexRuntimeHome, store })
+  // An update must not proceed after losing the most recent credential selection.
+  codexRuntimeHome?.syncForCurrentSelection()
+  await codexRuntimeHome?.syncActiveWslSelectionsBeforeRestart?.()
   await store.flushPendingOrThrowAsync({ fullCheckpoint: true })
+  await createUpdateProfileSnapshot(app.getPath('userData'), app.getVersion())
 }

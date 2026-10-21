@@ -185,3 +185,4 @@ ci-shards/
 /.build/windows-native-benchmark/
 
 .local/static-analysis-research/
+!/docs/reference/update-data-preservation.md

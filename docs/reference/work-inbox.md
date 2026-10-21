@@ -48,3 +48,6 @@ Use disposable profiles for UI tests. Never point fixtures at an existing user p
 - Added the explicit question queue, opt-in CLI/MCP entry points, and desktop answer/history view.
 - Added close-without-answer and reopen. The initial queue lacked a rendered close action; regression tests cover stale revisions, answer races and immediate reopen notifications.
 - Automatic agent routing, docked layout, team startup and updater changes are outside this contribution.
+
+**Review regression:** The closed inbox no longer polls an unused count. An unsupported host stops automatic retries until a new open or explicit refresh. use-work-inbox.test.ts covers both cases; the hidden Electron lifecycle test covers close, reopen, answer and receipt. English fallbacks and the Simplified Chinese catalog now agree.
+

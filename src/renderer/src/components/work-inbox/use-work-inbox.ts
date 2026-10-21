@@ -43,6 +43,8 @@ export function useWorkInbox({
   const [list, setList] = useState<ListSnapshot | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<WorkInboxLoadError | null>(null)
+  const loadErrorRef = useRef(loadError)
+  loadErrorRef.current = loadError
   const [known, setKnown] = useState<KnownLabels>({
     targetKey: '',
     projects: new Map(),
@@ -77,23 +79,17 @@ export function useWorkInbox({
     }
     const seq = ++requestSeq.current
     const requestQueryKey = queryKey
-    const countOnly = !open
     loadingRef.current = true
     setLoading(true)
     try {
       const tracked = receiptRef.current?.targetKey === targetKey ? receiptRef.current : null
       const [result, confirmation] = await Promise.all([
-        listWorkInbox(
-          target,
-          countOnly
-            ? { view: 'open', limit: 1 }
-            : {
-                view,
-                ...(projectId ? { projectId } : {}),
-                ...(agentId ? { agentId } : {}),
-                limit
-              }
-        ),
+        listWorkInbox(target, {
+          view,
+          ...(projectId ? { projectId } : {}),
+          ...(agentId ? { agentId } : {}),
+          limit
+        }),
         tracked?.item.status === 'answered'
           ? listWorkInbox(target, { view: 'history', id: tracked.item.id, limit: 1 })
               .then(
@@ -105,15 +101,13 @@ export function useWorkInbox({
       if (seq !== requestSeq.current || queryKeyRef.current !== requestQueryKey) {
         return
       }
-      if (!countOnly) {
-        setList((previous) => ({
-          queryKey: requestQueryKey,
-          items:
-            previous?.queryKey === requestQueryKey
-              ? mergeWorkInboxItems(previous.items, result.items)
-              : result.items
-        }))
-      }
+      setList((previous) => ({
+        queryKey: requestQueryKey,
+        items:
+          previous?.queryKey === requestQueryKey
+            ? mergeWorkInboxItems(previous.items, result.items)
+            : result.items
+      }))
       setKnown((previous) =>
         rememberLabels(
           previous.targetKey === targetKey
@@ -123,6 +117,7 @@ export function useWorkInbox({
           result.openCount
         )
       )
+      loadErrorRef.current = null
       setLoadError(null)
       if (tracked?.item.status === 'answered') {
         setReceipt((previous) =>
@@ -143,23 +138,26 @@ export function useWorkInbox({
         return
       }
       console.error('Failed to load Work Inbox:', error)
-      setLoadError(hasRuntimeRpcErrorCode(error, 'method_not_found') ? 'unsupported' : 'failed')
+      loadErrorRef.current = hasRuntimeRpcErrorCode(error, 'method_not_found')
+        ? 'unsupported'
+        : 'failed'
+      setLoadError(loadErrorRef.current)
     } finally {
       if (seq === requestSeq.current) {
         loadingRef.current = false
         setLoading(false)
       }
     }
-  }, [open, target, targetKey, queryKey, view, projectId, agentId, limit])
+  }, [target, targetKey, queryKey, view, projectId, agentId, limit])
 
   useEffect(() => {
-    if (!target) {
+    if (!target || !open) {
       return
     }
     void load()
     const timer = window.setInterval(() => {
       // Why: a background tick must not supersede a user-triggered load still in flight.
-      if (!loadingRef.current) {
+      if (!loadingRef.current && loadErrorRef.current !== 'unsupported') {
         void load()
       }
     }, WORK_INBOX_REFRESH_MS)

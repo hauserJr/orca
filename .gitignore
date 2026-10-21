@@ -187,3 +187,4 @@ ci-shards/
 /.build/windows-native-benchmark/
 
 .local/static-analysis-research/
+!/docs/reference/work-inbox-routing.md

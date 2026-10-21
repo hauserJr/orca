@@ -1,5 +1,6 @@
 import { defineMethod, InvalidArgumentError, type RpcContext } from '../core'
 import { OrchestrationError } from '../../orchestration/orchestration-error'
+import { deliverWorkInboxChatAnswer } from '../../work-inbox/work-inbox-chat-delivery'
 import { clampOrchestrationAskTimeoutMs } from '../../../../shared/orchestration-ask-timeout'
 import {
   WorkInboxAckParams,
@@ -72,9 +73,12 @@ export const WORK_INBOX_METHODS = [
     params: WorkInboxAnswerParams,
     handler: async (params, ctx) => {
       assertHumanCaller(ctx)
-      const result = workInboxStoreFor(ctx.runtime.getOrchestrationDb()).answer(params, Date.now())
+      const store = workInboxStoreFor(ctx.runtime.getOrchestrationDb())
+      const result = store.answer(params, Date.now())
       if (result.status === 'ok') {
-        wakeWorkInboxWaiters(params.id)
+        if (!wakeWorkInboxWaiters(params.id)) {
+          await deliverWorkInboxChatAnswer(store, result.item)
+        }
       }
       return result
     }

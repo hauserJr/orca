@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { prepareWorkInboxCliLaunch, workInboxCliServer } from './work-inbox-cli-launch'
 import {
   codexWorkInboxLaunchArgs,
+  prepareCodexWorkInboxCommand,
   withCodexWorkInboxCommand
 } from '../../codex/codex-work-inbox-launch'
 import { codexWorkInboxDeveloperInstructions } from '../../codex/codex-work-inbox-instructions'
@@ -24,6 +25,21 @@ afterEach(async () => {
   await rm(environment.root, { recursive: true, force: true })
 })
 describe('inbox launch contracts', () => {
+  it.each(['powershell', 'cmd'] as const)(
+    'refuses unsafe Codex instruction quoting in %s before probing',
+    async (shell) => {
+      await expect(
+        prepareCodexWorkInboxCommand({ command: 'codex', agent: 'codex', shell, remote: false })
+      ).rejects.toThrow('requires a POSIX shell')
+    }
+  )
+  it('preserves the provider-inherited terminal but never ambient native session identity', () => {
+    const terminal = workInboxCliServer({ ORCA_WORK_INBOX_ROUTING: '1' })
+    expect(Object.hasOwn(terminal.env, 'ORCA_TERMINAL_HANDLE')).toBe(false)
+    expect(terminal.env.ORCA_AGENT_SESSION_ID).toBe('')
+    const chat = workInboxCliServer({ ORCA_AGENT_SESSION_ID: 'chat-id' })
+    expect(chat.env).toMatchObject({ ORCA_TERMINAL_HANDLE: '', ORCA_AGENT_SESSION_ID: 'chat-id' })
+  })
   it.each([
     'claude --append-system-prompt=Original',
     'claude --append-system-prompt-file policy.md'

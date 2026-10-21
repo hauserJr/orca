@@ -106,9 +106,9 @@ export async function prepareCodexWorkInboxCommand(
   if (input.remote || !command || input.agent !== 'codex' || !hasAppEnvironment()) {
     return { command, env: input.env }
   }
-  if (input.shell === 'cmd') {
+  if (input.shell === 'cmd' || input.shell === 'powershell') {
     throw new Error(
-      'Orca Work Inbox instruction delivery requires PowerShell or a POSIX shell; select one before launching Codex.'
+      'Orca Work Inbox terminal instruction delivery requires a POSIX shell. Use native chat or a POSIX terminal; Windows shell quoting cannot yet preserve these instructions safely.'
     )
   }
   const parsed = tokenizeStartupCommand(command, input.shell)
@@ -157,10 +157,7 @@ export async function prepareCodexWorkInboxCommand(
     )
   }
   // Keep user instructions out of the typed command and terminal history.
-  const suffix =
-    input.shell === 'powershell'
-      ? '-c $env:ORCA_CODEX_INBOX_INSTRUCTIONS'
-      : '-c "$ORCA_CODEX_INBOX_INSTRUCTIONS"'
+  const suffix = '-c "$ORCA_CODEX_INBOX_INSTRUCTIONS"'
   const terminator = parsed.tokens.indexOf('--')
   const at = terminator !== -1 ? parsed.spans[terminator].start : command.length
   return {

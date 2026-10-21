@@ -119,6 +119,9 @@ export function workInboxCliServer(env?: Record<string, string>) {
   const identity: Record<string, string> = {}
   if (env) {
     for (const key of WORK_INBOX_CALLER_KEYS) {
+      if (key === 'ORCA_TERMINAL_HANDLE' && env[key] === undefined && !env.ORCA_AGENT_SESSION_ID) {
+        continue
+      }
       identity[key] = env[key] ?? ''
     }
   }

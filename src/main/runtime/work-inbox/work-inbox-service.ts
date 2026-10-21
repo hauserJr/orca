@@ -20,10 +20,13 @@ export function workInboxStoreFor(db: OrchestrationDb): WorkInboxStore {
   return store
 }
 
-export function wakeWorkInboxWaiters(id: string): void {
-  for (const wake of waiters.get(id) ?? []) {
+export function wakeWorkInboxWaiters(id: string): boolean {
+  const active = waiters.get(id)
+  const waiting = Boolean(active?.size)
+  for (const wake of active ?? []) {
     wake()
   }
+  return waiting
 }
 
 export function waitForWorkInboxChange(

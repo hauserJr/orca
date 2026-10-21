@@ -62,6 +62,8 @@ test('explicit team bindings launch once without changing existing settings', as
       await window.__store!.getState().fetchWorktrees(result.repo.id)
       await window.__store!.getState().updateSettingsOrThrow({ terminalFontSize: 19 })
     }, folder)
+    await expect(launched.page.getByText('Review team agent', { exact: true })).toHaveCount(0)
+    await launched.page.screenshot({ path: testInfo.outputPath('team-before-enable.png') })
     await writeFile(
       registry,
       JSON.stringify({ version: 1, teams: [{ ...binding, enabled: true }] })
@@ -100,6 +102,7 @@ test('explicit team bindings launch once without changing existing settings', as
     await expect(
       launched.page.getByText('Review team agent', { exact: true }).first()
     ).toBeVisible()
+    await launched.page.screenshot({ path: testInfo.outputPath('team-after-enable.png') })
     expect((await readFile(marker, 'utf8')).trim().split('\n')).toHaveLength(1)
     expect(
       await launched.page.evaluate(() => window.__store!.getState().settings?.terminalFontSize)

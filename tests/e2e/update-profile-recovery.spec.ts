@@ -1,11 +1,12 @@
 import type { ElectronApplication } from '@stablyai/playwright-test'
-import { readFile, rename, writeFile } from 'node:fs/promises'
+import { readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { test, expect } from './helpers/orca-app'
 import { createRestartSession } from './helpers/orca-restart'
 import { waitForSessionReady } from './helpers/store'
 import { createUpdateProfileSnapshot } from '../../src/main/update-profile-snapshot'
 import { restoreUpdateProfileSnapshot } from '../../src/main/update-profile-restore'
+import { cleanupE2EDaemons } from './helpers/electron-process-shutdown'
 
 // oxlint-disable-next-line no-empty-pattern -- Owns the isolated profile across two launches.
 test('a recovered profile loads saved settings without reinitialization', async ({}, testInfo) => {
@@ -28,6 +29,7 @@ test('a recovered profile loads saved settings without reinitialization', async 
     await writeFile(join(session.userDataDir, 'history.json'), '["existing task"]')
     await session.close(active)
     active = undefined
+    await cleanupE2EDaemons(session.userDataDir)
     const backup = await createUpdateProfileSnapshot(
       session.userDataDir,
       'before-update',
@@ -58,6 +60,10 @@ test('a recovered profile loads saved settings without reinitialization', async 
       )
     ).toBe(true)
   } finally {
-    await session.dispose(active)
+    try {
+      await session.dispose(active)
+    } finally {
+      await rm(original, { recursive: true, force: true })
+    }
   }
 })

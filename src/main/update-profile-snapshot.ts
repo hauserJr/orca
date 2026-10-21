@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto'
-import { copyFile, lstat, mkdir, open, readdir, readlink, realpath } from 'node:fs/promises'
+import { copyFile, lstat, mkdir, open, readdir, readlink, realpath, rm } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { writeFileDurable } from './durable-file-write'
 import { snapshotUpdateDatabase } from './update-sqlite-snapshot'
 import { snapshotFileHash, createPrivateSnapshotDirectory } from './update-snapshot-file'
+import { pruneUpdateSnapshots } from './update-snapshot-retention'
 
 export type UpdateSnapshotEntry = { path: string; sha256?: string; link?: string; directory?: true }
 export type UpdateSnapshotManifest = {
@@ -95,7 +96,9 @@ export async function createUpdateProfileSnapshot(
       if (levelDb && name === 'LOCK') {
         continue
       }
-      if (!directory && TRANSIENT_ROOTS.has(name)) {
+      // Chromium stores persistent browser partitions under Partitions/<name>.
+      const browserRoot = !directory || /^Partitions[\\/][^\\/]+$/.test(directory)
+      if (browserRoot && TRANSIENT_ROOTS.has(name)) {
         continue
       }
       const path = join(directory, name)
@@ -145,18 +148,25 @@ export async function createUpdateProfileSnapshot(
       }
     }
   }
-  await visit('')
-  const manifest: UpdateSnapshotManifest = {
-    format: 1,
-    version,
-    createdAt: new Date().toISOString(),
-    entries
+  try {
+    await visit('')
+    const manifest: UpdateSnapshotManifest = {
+      format: 1,
+      version,
+      createdAt: new Date().toISOString(),
+      entries
+    }
+    // A failed copy has no manifest and can never be mistaken for a completed backup.
+    await writeFileDurable(
+      join(destination, 'manifest.tmp'),
+      join(destination, 'manifest.json'),
+      JSON.stringify(manifest)
+    )
+  } catch (error) {
+    // Only remove this invocation's private staging directory, never another writer's.
+    await rm(destination, { recursive: true, force: true }).catch(() => undefined)
+    throw error
   }
-  // A failed copy has no manifest and can never be mistaken for a completed backup.
-  await writeFileDurable(
-    join(destination, 'manifest.tmp'),
-    join(destination, 'manifest.json'),
-    JSON.stringify(manifest)
-  )
+  await pruneUpdateSnapshots(root, destination)
   return destination
 }

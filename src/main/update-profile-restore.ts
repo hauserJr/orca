@@ -26,11 +26,17 @@ const Manifest = z.object({
   )
 })
 
+function pathIdentity(path: string): string {
+  return process.platform === 'win32' ? path.toLowerCase() : path
+}
+
 function containedPath(root: string, path: string): string {
   if (
     isAbsolute(path) ||
     path.includes('\0') ||
-    path.split(/[\\/]/).some((part) => part === '..' || part.includes(':'))
+    path
+      .split(/[\\/]/)
+      .some((part) => part === '..' || (process.platform === 'win32' && part.includes(':')))
   ) {
     throw new Error('Unsafe backup path')
   }
@@ -53,13 +59,13 @@ export async function restoreUpdateProfileSnapshot(
   const paths = new Set<string>()
   const links = manifest.entries
     .filter((entry) => entry.link !== undefined)
-    .map((entry) => containedPath(target, entry.path))
+    .map((entry) => pathIdentity(containedPath(target, entry.path)))
   for (const entry of manifest.entries) {
     const output = containedPath(target, entry.path)
-    if (links.some((link) => output.startsWith(`${link}${sep}`))) {
+    if (links.some((link) => pathIdentity(output).startsWith(`${link}${sep}`))) {
       throw new Error('Backup link cannot be an ancestor of another entry')
     }
-    const identity = process.platform === 'win32' ? output.toLowerCase() : output
+    const identity = pathIdentity(output)
     if (paths.has(identity)) {
       throw new Error('Duplicate backup path')
     }

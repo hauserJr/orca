@@ -20,6 +20,55 @@ async function fixture() {
   return { root, profile }
 }
 describe('Update backup and recovery', () => {
+  it.runIf(process.platform !== 'win32')('restores POSIX filenames containing colons', async () => {
+    const { root, profile } = await fixture()
+    await writeFile(join(profile, 'a:b'), 'retained')
+    const backup = await createUpdateProfileSnapshot(profile, 'v1')
+    await restoreUpdateProfileSnapshot(backup, join(root, 'restored'))
+    expect(await readFile(join(root, 'restored', 'a:b'), 'utf8')).toBe('retained')
+  })
+  it('excludes Chromium partition caches but retains same-named user folders', async () => {
+    const { root, profile } = await fixture()
+    for (const directory of ['Partitions/browser/Cache', 'documents/Cache']) {
+      await mkdir(join(profile, directory), { recursive: true })
+      await writeFile(join(profile, directory, 'entry'), 'retained')
+    }
+    const backup = await createUpdateProfileSnapshot(profile, 'v1')
+    const manifest = JSON.parse(await readFile(join(backup, 'manifest.json'), 'utf8'))
+    expect(manifest.entries.some((entry: { path: string }) => entry.path.includes('browser'))).toBe(
+      true
+    )
+    expect(
+      manifest.entries.some(
+        (entry: { path: string }) => entry.path === join('Partitions', 'browser', 'Cache')
+      )
+    ).toBe(false)
+    await restoreUpdateProfileSnapshot(backup, join(root, 'restored'))
+    expect(await readFile(join(root, 'restored', 'documents', 'Cache', 'entry'), 'utf8')).toBe(
+      'retained'
+    )
+  })
+  it('retains two completed backups and leaves unrelated directories untouched', async () => {
+    const { root, profile } = await fixture()
+    const backupRoot = join(root, 'backups')
+    await mkdir(join(backupRoot, 'user-files'), { recursive: true })
+    await writeFile(join(backupRoot, 'user-files', 'keep'), 'keep')
+    const backups: string[] = []
+    for (let i = 0; i < 3; i++) {
+      await writeFile(join(profile, 'settings.json'), String(i))
+      backups.push(await createUpdateProfileSnapshot(profile, String(i), backupRoot))
+    }
+    await expect(readFile(join(backups[0], 'manifest.json'))).rejects.toMatchObject({
+      code: 'ENOENT'
+    })
+    for (const index of [1, 2]) {
+      await restoreUpdateProfileSnapshot(backups[index], join(root, `restore-${index}`))
+      expect(await readFile(join(root, `restore-${index}`, 'settings.json'), 'utf8')).toBe(
+        String(index)
+      )
+    }
+    expect(await readFile(join(backupRoot, 'user-files', 'keep'), 'utf8')).toBe('keep')
+  })
   it.runIf(process.platform !== 'win32')(
     'retains executable workflow files with private permissions',
     async () => {
@@ -144,6 +193,30 @@ describe('Update backup and recovery', () => {
     expect(manifest.entries).toHaveLength(1)
     expect(manifest.entries[0].path).toBe('state.db')
   })
+  it.runIf(process.platform === 'win32')(
+    'rejects case-aliased symlink ancestors before writing',
+    async () => {
+      const { root, profile } = await fixture()
+      const backup = await createUpdateProfileSnapshot(profile, 'v1')
+      const destination = join(root, 'rejected-case')
+      await writeFile(
+        join(backup, 'manifest.json'),
+        JSON.stringify({
+          format: 1,
+          version: 'v1',
+          createdAt: '',
+          entries: [
+            { path: 'Link', link: root },
+            { path: 'link/child', link: 'external' }
+          ]
+        })
+      )
+      await expect(restoreUpdateProfileSnapshot(backup, destination)).rejects.toThrow('ancestor')
+      const { lstat } = await import('node:fs/promises')
+      await expect(lstat(destination)).rejects.toMatchObject({ code: 'ENOENT' })
+      await expect(lstat(join(root, 'child'))).rejects.toMatchObject({ code: 'ENOENT' })
+    }
+  )
   it('rejects path traversal and symlink ancestors before creating a restored directory', async () => {
     const { root, profile } = await fixture()
     const backup = await createUpdateProfileSnapshot(profile, 'v1')

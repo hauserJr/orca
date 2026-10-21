@@ -1,4 +1,5 @@
 import React from 'react'
+import { isImeOwnedKeyboardEvent } from '@/lib/ime-composition-keyboard-event'
 import { Pin, PinOff, RefreshCw, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { WorkInboxDockFrame } from './WorkInboxDockFrame'
@@ -90,6 +91,7 @@ export function WorkInboxSheet({
     const close = (event: KeyboardEvent) => {
       if (
         event.key === 'Escape' &&
+        !isImeOwnedKeyboardEvent(event) &&
         event.target instanceof Element &&
         event.target.closest('[data-work-inbox-dock]')
       ) {

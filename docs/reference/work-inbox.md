@@ -47,4 +47,6 @@ Use disposable profiles for UI tests. Never point fixtures at an existing user p
 
 - Added the explicit question queue, opt-in CLI/MCP entry points, and desktop answer/history view.
 - Added close-without-answer and reopen. The initial queue lacked a rendered close action; regression tests cover stale revisions, answer races and immediate reopen notifications.
-- Automatic agent routing, docked layout, team startup and updater changes are outside this contribution.
+- The inbox can be pinned beside the workspace and resized. Escape closes the dock except during IME composition. Automatic agent routing, team startup and updater changes are outside this contribution.
+
+**Review regression:** Docked Escape uses the shared IME ownership predicate. The hidden Electron case sends composing and Chromium 229 Escape events, checks the panel and draft survive, then verifies ordinary Escape still closes it. Native OS input-method interaction remains a separate platform test.

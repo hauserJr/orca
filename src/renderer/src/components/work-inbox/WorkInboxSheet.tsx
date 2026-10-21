@@ -93,7 +93,7 @@ export function WorkInboxSheet({
           'auto.components.work-inbox.emptyOpen',
           'No agent is waiting on you. When an agent needs your decision, its question appears here.'
         )
-      : translate('auto.components.work-inbox.emptyHistory', 'No answered questions yet.')
+      : translate('auto.components.work-inbox.emptyHistory', 'No answered or closed questions yet.')
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

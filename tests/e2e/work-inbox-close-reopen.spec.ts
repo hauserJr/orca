@@ -38,6 +38,14 @@ test('question X closes without approval and history reopens the original questi
   await card.getByRole('checkbox', { name: 'Approve (recommended)', exact: true }).click()
   await expect(card.getByRole('button', { name: 'Send answer', exact: true })).toBeEnabled()
   await orcaPage.screenshot({ path: testInfo.outputPath('question-close.png') })
+  await orcaPage.evaluate(() => window.__store!.getState().updateSettingsOrThrow({ theme: 'dark' }))
+  await expect(orcaPage.locator('html')).toHaveClass(/dark/)
+  await expect(card).toBeVisible()
+  await orcaPage.screenshot({ path: testInfo.outputPath('question-dark.png') })
+  await orcaPage.evaluate(() =>
+    window.__store!.getState().updateSettingsOrThrow({ theme: 'light' })
+  )
+  await expect(orcaPage.locator('html')).not.toHaveClass(/dark/)
   await card.getByRole('button', { name: 'Close without answering', exact: true }).click()
   await expect(card).toHaveCount(0)
   const notification = await orcaPage.evaluate(

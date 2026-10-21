@@ -89,7 +89,8 @@ export async function restoreUpdateProfileSnapshot(
     }
     const file = await open(output, 'r+')
     try {
-      await file.chmod(0o600)
+      const sourceMode = (await lstat(containedPath(data, entry.path))).mode
+      await file.chmod(0o600 | (sourceMode & 0o100))
       await file.sync()
     } finally {
       await file.close()

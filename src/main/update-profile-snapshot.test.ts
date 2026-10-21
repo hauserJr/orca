@@ -20,6 +20,19 @@ async function fixture() {
   return { root, profile }
 }
 describe('Update backup and recovery', () => {
+  it.runIf(process.platform !== 'win32')(
+    'retains executable workflow files with private permissions',
+    async () => {
+      const { root, profile } = await fixture()
+      const { chmod, stat } = await import('node:fs/promises')
+      await writeFile(join(profile, 'workflow.sh'), '#!/bin/sh\nexit 0\n')
+      await chmod(join(profile, 'workflow.sh'), 0o755)
+      const backup = await createUpdateProfileSnapshot(profile, 'v1')
+      const restored = join(root, 'restored-script')
+      await restoreUpdateProfileSnapshot(backup, restored)
+      expect((await stat(join(restored, 'workflow.sh'))).mode & 0o777).toBe(0o700)
+    }
+  )
   it('preserves WAL task records, settings, credentials, workflow documents and history through restore', async () => {
     const { root, profile } = await fixture()
     const documents = {

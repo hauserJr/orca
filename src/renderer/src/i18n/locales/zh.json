@@ -18229,8 +18229,8 @@
           "open": "未回答",
           "answered": "已回答",
           "cancelled": "已关闭，未回答",
-          "delivered": "Agent 已收到",
-          "awaitingReceipt": "等待 Agent 接收"
+          "delivered": "智能体已收到",
+          "awaitingReceipt": "等待智能体接收"
         },
         "error": {
           "conflict": "在你的答案保存前，这个问题已有变化。草稿已保留，请查看上方的当前状态。",
@@ -18253,7 +18253,7 @@
         "title": "工作收件箱",
         "description": "智能体向你提出的问题。提问的智能体收到你的答案后会继续工作。",
         "tabOpen": "未回答",
-        "tabHistory": "歷史紀錄",
+        "tabHistory": "历史记录",
         "filterProject": "按项目筛选",
         "allProjects": "所有项目",
         "filterAgent": "按智能体筛选",

@@ -50,3 +50,6 @@ Use disposable profiles for UI tests. Never point fixtures at an existing user p
 - The inbox can be pinned beside the workspace and resized. Escape closes the dock except during IME composition. Automatic agent routing, team startup and updater changes are outside this contribution.
 
 **Review regression:** Docked Escape uses the shared IME ownership predicate. The hidden Electron case sends composing and Chromium 229 Escape events, checks the panel and draft survive, then verifies ordinary Escape still closes it. Native OS input-method interaction remains a separate platform test.
+
+**Polling regression:** Closed panels do not poll unused counts; unsupported hosts stop automatic retries until reopened or explicitly refreshed. The shared hook tests cover both cases.
+

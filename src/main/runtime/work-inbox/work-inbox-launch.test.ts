@@ -36,7 +36,7 @@ describe('inbox launch contracts', () => {
   it('preserves the provider-inherited terminal but never ambient native session identity', () => {
     const terminal = workInboxCliServer({ ORCA_WORK_INBOX_ROUTING: '1' })
     expect(Object.hasOwn(terminal.env, 'ORCA_TERMINAL_HANDLE')).toBe(false)
-    expect(terminal.env.ORCA_AGENT_SESSION_ID).toBe('')
+    expect(terminal.env).toMatchObject({ ORCA_AGENT_SESSION_ID: '' })
     const chat = workInboxCliServer({ ORCA_AGENT_SESSION_ID: 'chat-id' })
     expect(chat.env).toMatchObject({ ORCA_TERMINAL_HANDLE: '', ORCA_AGENT_SESSION_ID: 'chat-id' })
   })

@@ -81,6 +81,7 @@ test('an answer after the tool wait ends resumes the original native chat', asyn
   await card.getByRole('button', { name: 'Send answer', exact: true }).click()
   await expect(card).toHaveCount(0)
   await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: 'Work Inbox' })).toBeHidden()
   await expect(chat.getByText('Stub reply.', { exact: true })).toHaveCount(2, { timeout: 30000 })
   await expect(chat.getByText(/Answer to Work Inbox question/).first()).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('late-answer-resumed-chat.png') })

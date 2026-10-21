@@ -18526,7 +18526,10 @@
         "loading": "Loading questions…",
         "showMore": "Show more",
         "capped": "Showing the first 200 questions. Filter by project or agent to see the rest.",
-        "sidebarLabel": "Work Inbox"
+        "sidebarLabel": "Work Inbox",
+        "pin": "Pin to right",
+        "unpin": "Unpin inbox",
+        "resize": "Resize inbox"
       }
     },
     "i18n": {
